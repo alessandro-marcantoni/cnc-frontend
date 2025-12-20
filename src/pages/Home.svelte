@@ -1,5 +1,5 @@
 <script lang="ts">
-    import MemberStats from "$lib/components/members/member-stats.svelte";
+    import MembersStats from "$lib/components/members/members-stats.svelte";
     import MembersDataTable from "$lib/components/members/members-data-table.svelte";
     import Header from "$lib/components/shared/header.svelte";
     import * as Card from "$lib/components/ui/card";
@@ -11,7 +11,7 @@
 <!-- Main Content -->
 <main class="container mx-auto px-4 py-8">
     <!-- Stats Grid -->
-    <MemberStats members={mockMembers} />
+    <MembersStats members={mockMembers} />
 
     <!-- Members Table -->
     <Card.Root>
