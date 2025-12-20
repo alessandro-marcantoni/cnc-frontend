@@ -5,7 +5,7 @@
     import { Input } from "$lib/components/ui/input";
     import MultiSelect from "$lib/components/ui/multi-select.svelte";
     import { ChevronUp, ChevronDown } from "@lucide/svelte";
-    import type { Member } from "$model/members/member";
+    import type { Member, MembershipStatus } from "$model/members/member";
 
     const statusOptions = [
         { value: "ACTIVE", label: "Active", variant: "default" as const },
@@ -26,7 +26,11 @@
 
     // State
     let searchQuery = $state("");
-    let statusFilter = $state<string[]>(["ACTIVE", "SUSPENDED", "EXPIRED"]);
+    let statusFilter = $state<MembershipStatus[]>([
+        "ACTIVE",
+        "SUSPENDED",
+        "EXPIRED",
+    ]);
     let sortColumn = $state<string | null>(null);
     let sortDirection = $state<"asc" | "desc">("asc");
     let currentPage = $state(0);

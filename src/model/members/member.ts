@@ -24,7 +24,9 @@ export type PhoneNumber = {
 export type Membership = {
   id: number;
   number: number;
-  status: string;
+  status: MembershipStatus;
   validFrom: Date;
   expiresAt: Date;
 };
+
+export type MembershipStatus = "ACTIVE" | "SUSPENDED" | "EXPIRED";
