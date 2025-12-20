@@ -5,7 +5,7 @@
     import Header from "$lib/components/shared/header.svelte";
     import * as Card from "$lib/components/ui/card";
     import { Button } from "$lib/components/ui/button";
-    import { RefreshCw, CircleAlert } from "@lucide/svelte";
+    import { RefreshCw, CircleAlert, UserPlus } from "@lucide/svelte";
     import {
         members,
         isLoadingMembers,
@@ -31,7 +31,7 @@
     }
 </script>
 
-<Header />
+<Header showAddMember={false} />
 
 <!-- Main Content -->
 <main class="container mx-auto px-4 py-8">
@@ -77,19 +77,24 @@
                             Filter by name or toggle membership status.
                         </Card.Description>
                     </div>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onclick={handleRefresh}
-                        disabled={$isLoadingMembers}
-                    >
-                        <RefreshCw
-                            class={$isLoadingMembers
-                                ? "h-4 w-4 mr-2 animate-spin"
-                                : "h-4 w-4 mr-2"}
-                        />
-                        Refresh
-                    </Button>
+                    <div class="flex gap-2">
+                        <Button>
+                            <UserPlus class="h-4 w-4 mr-2" />
+                            Add Member
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onclick={handleRefresh}
+                            disabled={$isLoadingMembers}
+                        >
+                            <RefreshCw
+                                class={$isLoadingMembers
+                                    ? "h-4 w-4 mr-2 animate-spin"
+                                    : "h-4 w-4 mr-2"}
+                            />
+                            Refresh
+                        </Button>
+                    </div>
                 </div>
             </Card.Header>
             <Card.Content>
