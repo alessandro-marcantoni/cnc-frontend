@@ -8,13 +8,13 @@
     import type { Member, MembershipStatus } from "$model/members/member";
 
     const statusOptions = [
-        { value: "ACTIVE", label: "Active", variant: "default" as const },
+        { value: "ACTIVE", label: "Attivo", variant: "default" as const },
         {
             value: "SUSPENDED",
-            label: "Suspended",
+            label: "Sospeso",
             variant: "destructive" as const,
         },
-        { value: "EXPIRED", label: "Expired", variant: "secondary" as const },
+        { value: "EXPIRED", label: "Scaduto", variant: "secondary" as const },
     ];
 
     // Props
@@ -162,6 +162,11 @@
         }
     }
 
+    function navigateToMember(memberId: number) {
+        window.history.pushState({}, "", `/members/${memberId}`);
+        window.dispatchEvent(new PopStateEvent("popstate"));
+    }
+
     // Reset to first page when search query or status filter changes
     $effect(() => {
         searchQuery;
@@ -177,7 +182,7 @@
     >
         <div class="flex-1 max-w-sm">
             <Input
-                placeholder="Filter by name..."
+                placeholder="Filtra per nome..."
                 bind:value={searchQuery}
                 class="w-full"
             />
@@ -187,12 +192,12 @@
                 for="status-filter"
                 class="text-sm font-medium text-muted-foreground"
             >
-                Status:
+                Stato:
             </label>
             <MultiSelect
                 options={statusOptions}
                 bind:selected={statusFilter}
-                placeholder="Select status..."
+                placeholder="Seleziona stato..."
                 class="w-[280px]"
             />
         </div>
@@ -208,7 +213,7 @@
                             class="flex items-center gap-1 font-medium hover:text-foreground"
                             onclick={() => handleSort("memberNumber")}
                         >
-                            Member #
+                            N° Socio
                             {#if isSortedAsc("memberNumber")}
                                 <ChevronUp class="h-4 w-4" />
                             {:else if isSortedDesc("memberNumber")}
@@ -221,7 +226,7 @@
                             class="flex items-center gap-1 font-medium hover:text-foreground"
                             onclick={() => handleSort("name")}
                         >
-                            Name
+                            Nome
                             {#if isSortedAsc("name")}
                                 <ChevronUp class="h-4 w-4" />
                             {:else if isSortedDesc("name")}
@@ -247,7 +252,7 @@
                             class="flex items-center gap-1 font-medium hover:text-foreground"
                             onclick={() => handleSort("phone")}
                         >
-                            Phone
+                            Telefono
                             {#if isSortedAsc("phone")}
                                 <ChevronUp class="h-4 w-4" />
                             {:else if isSortedDesc("phone")}
@@ -260,7 +265,7 @@
                             class="flex items-center gap-1 font-medium hover:text-foreground"
                             onclick={() => handleSort("location")}
                         >
-                            Location
+                            Località
                             {#if isSortedAsc("location")}
                                 <ChevronUp class="h-4 w-4" />
                             {:else if isSortedDesc("location")}
@@ -273,7 +278,7 @@
                             class="flex items-center gap-1 font-medium hover:text-foreground"
                             onclick={() => handleSort("status")}
                         >
-                            Status
+                            Stato
                             {#if isSortedAsc("status")}
                                 <ChevronUp class="h-4 w-4" />
                             {:else if isSortedDesc("status")}
@@ -286,7 +291,7 @@
                             class="flex items-center gap-1 font-medium hover:text-foreground"
                             onclick={() => handleSort("joinedDate")}
                         >
-                            Member Since
+                            Socio dal
                             {#if isSortedAsc("joinedDate")}
                                 <ChevronUp class="h-4 w-4" />
                             {:else if isSortedDesc("joinedDate")}
@@ -299,7 +304,7 @@
                             class="flex items-center gap-1 font-medium hover:text-foreground"
                             onclick={() => handleSort("expiresAt")}
                         >
-                            Expires
+                            Scadenza
                             {#if isSortedAsc("expiresAt")}
                                 <ChevronUp class="h-4 w-4" />
                             {:else if isSortedDesc("expiresAt")}
@@ -312,7 +317,10 @@
             <Table.Body>
                 {#if paginatedMembers.length > 0}
                     {#each paginatedMembers as member (member.id)}
-                        <Table.Row>
+                        <Table.Row
+                            class="cursor-pointer hover:bg-muted/50 transition-colors"
+                            onclick={() => navigateToMember(member.id)}
+                        >
                             <Table.Cell class="font-medium">
                                 {member.membership.number}
                             </Table.Cell>
@@ -356,7 +364,7 @@
                 {:else}
                     <Table.Row>
                         <Table.Cell colspan={8} class="h-24 text-center">
-                            No members found matching your filters.
+                            Nessun socio trovato con i filtri selezionati.
                         </Table.Cell>
                     </Table.Row>
                 {/if}
@@ -367,12 +375,12 @@
     <!-- Pagination -->
     <div class="flex items-center justify-between px-2">
         <div class="flex-1 text-sm text-muted-foreground">
-            Showing {filteredMembers.length > 0
+            Visualizzazione {filteredMembers.length > 0
                 ? currentPage * pageSize + 1
                 : 0}-{Math.min(
                 (currentPage + 1) * pageSize,
                 filteredMembers.length,
-            )} of {filteredMembers.length} member(s)
+            )} di {filteredMembers.length} socio/i
         </div>
         <div class="flex items-center gap-2">
             <Button
@@ -381,10 +389,10 @@
                 onclick={previousPage}
                 disabled={currentPage === 0}
             >
-                Previous
+                Precedente
             </Button>
             <div class="text-sm">
-                Page {totalPages > 0 ? currentPage + 1 : 0} of {totalPages}
+                Pagina {totalPages > 0 ? currentPage + 1 : 0} di {totalPages}
             </div>
             <Button
                 variant="outline"
@@ -392,7 +400,7 @@
                 onclick={nextPage}
                 disabled={currentPage >= totalPages - 1}
             >
-                Next
+                Successiva
             </Button>
         </div>
     </div>

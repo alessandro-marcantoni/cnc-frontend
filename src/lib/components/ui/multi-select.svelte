@@ -20,7 +20,7 @@
     let {
         options,
         selected = $bindable([]),
-        placeholder = "Select items...",
+        placeholder = "Seleziona elementi...",
         class: className,
     }: Props = $props();
 

@@ -37,7 +37,7 @@
                     Circolo Nautico Cattolica
                 </h1>
                 <p class="text-muted-foreground mt-1">
-                    Member Management Dashboard
+                    Dashboard Gestione Soci
                 </p>
             </div>
             <div class="flex gap-4 items-center">
@@ -59,7 +59,7 @@
                             ? 'bg-primary text-primary-foreground'
                             : 'text-muted-foreground hover:text-foreground hover:bg-accent'}"
                     >
-                        Services
+                        Servizi
                     </button>
                 </nav>
 
@@ -68,11 +68,11 @@
                     {#if showAddMember}
                         <Button variant="outline">
                             <Settings class="h-4 w-4 mr-2" />
-                            Settings
+                            Impostazioni
                         </Button>
                         <Button>
                             <UserPlus class="h-4 w-4 mr-2" />
-                            Add Member
+                            Aggiungi Socio
                         </Button>
                     {/if}
                 </div>

@@ -20,12 +20,12 @@
         <Card.Header
             class="flex flex-row items-center justify-between space-y-0 pb-2"
         >
-            <Card.Title class="text-sm font-medium">Total Members</Card.Title>
+            <Card.Title class="text-sm font-medium">Totale Soci</Card.Title>
             <Users class="h-4 w-4 text-muted-foreground" />
         </Card.Header>
         <Card.Content>
             <div class="text-2xl font-bold">{stats.total}</div>
-            <p class="text-xs text-muted-foreground mt-1">Registered members</p>
+            <p class="text-xs text-muted-foreground mt-1">Soci registrati</p>
         </Card.Content>
     </Card.Root>
 
@@ -33,7 +33,7 @@
         <Card.Header
             class="flex flex-row items-center justify-between space-y-0 pb-2"
         >
-            <Card.Title class="text-sm font-medium">Active</Card.Title>
+            <Card.Title class="text-sm font-medium">Attivi</Card.Title>
             <UserCheck class="h-4 w-4 text-green-600" />
         </Card.Header>
         <Card.Content>
@@ -41,7 +41,7 @@
             <p class="text-xs text-muted-foreground mt-1">
                 <span class="text-green-600"
                     >{Math.round((stats.active / stats.total) * 100)}%</span
-                > of total
+                > del totale
             </p>
         </Card.Content>
     </Card.Root>
@@ -50,7 +50,7 @@
         <Card.Header
             class="flex flex-row items-center justify-between space-y-0 pb-2"
         >
-            <Card.Title class="text-sm font-medium">Suspended</Card.Title>
+            <Card.Title class="text-sm font-medium">Sospesi</Card.Title>
             <UserX class="h-4 w-4 text-red-600" />
         </Card.Header>
         <Card.Content>
@@ -58,7 +58,7 @@
             <p class="text-xs text-muted-foreground mt-1">
                 <span class="text-red-600"
                     >{Math.round((stats.suspended / stats.total) * 100)}%</span
-                > of total
+                > del totale
             </p>
         </Card.Content>
     </Card.Root>
@@ -67,7 +67,7 @@
         <Card.Header
             class="flex flex-row items-center justify-between space-y-0 pb-2"
         >
-            <Card.Title class="text-sm font-medium">Expired</Card.Title>
+            <Card.Title class="text-sm font-medium">Scaduti</Card.Title>
             <Clock class="h-4 w-4 text-yellow-600" />
         </Card.Header>
         <Card.Content>
@@ -75,7 +75,7 @@
             <p class="text-xs text-muted-foreground mt-1">
                 <span class="text-yellow-600"
                     >{Math.round((stats.expired / stats.total) * 100)}%</span
-                > of total
+                > del totale
             </p>
         </Card.Content>
     </Card.Root>

@@ -43,12 +43,12 @@
             <CircleAlert class="h-12 w-12 text-destructive" />
             <div>
                 <h2 class="text-xl font-semibold mb-2">
-                    Failed to Load Members
+                    Impossibile Caricare i Soci
                 </h2>
                 <p class="text-muted-foreground mb-4">{$membersError}</p>
                 <Button onclick={handleRefresh}>
                     <RefreshCw class="h-4 w-4 mr-2" />
-                    Try Again
+                    Riprova
                 </Button>
             </div>
         </div>
@@ -60,7 +60,7 @@
             <div class="animate-spin">
                 <RefreshCw class="h-8 w-8 text-muted-foreground" />
             </div>
-            <p class="text-muted-foreground">Loading members...</p>
+            <p class="text-muted-foreground">Caricamento soci...</p>
         </div>
     {:else}
         <!-- Stats Grid -->
@@ -71,16 +71,16 @@
             <Card.Header>
                 <div class="flex items-center justify-between">
                     <div>
-                        <Card.Title>Members Directory</Card.Title>
+                        <Card.Title>Elenco Soci</Card.Title>
                         <Card.Description>
-                            A comprehensive list of all yacht club members.
-                            Filter by name or toggle membership status.
+                            Un elenco completo di tutti i soci del circolo
+                            nautico. Filtra per nome o stato di iscrizione.
                         </Card.Description>
                     </div>
                     <div class="flex gap-2">
                         <Button>
                             <UserPlus class="h-4 w-4 mr-2" />
-                            Add Member
+                            Aggiungi Socio
                         </Button>
                         <Button
                             variant="outline"
@@ -92,7 +92,7 @@
                                     ? "h-4 w-4 mr-2 animate-spin"
                                     : "h-4 w-4 mr-2"}
                             />
-                            Refresh
+                            Aggiorna
                         </Button>
                     </div>
                 </div>
