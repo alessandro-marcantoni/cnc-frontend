@@ -8,10 +8,10 @@
     const stats = $derived({
         total: members.length,
         active: members.filter((m) => m.membership.status === "ACTIVE").length,
-        suspended: members.filter((m) => m.membership.status === "SUSPENDED")
-            .length,
-        expired: members.filter((m) => m.membership.status === "EXPIRED")
-            .length,
+        unpaid: members.filter((m) => m.membership.status === "UNPAID").length,
+        exclusionDeliberated: members.filter(
+            (m) => m.membership.status === "EXCLUSION_DELIBERATED",
+        ).length,
     });
 </script>
 
@@ -50,14 +50,14 @@
         <Card.Header
             class="flex flex-row items-center justify-between space-y-0 pb-2"
         >
-            <Card.Title class="text-sm font-medium">Sospesi</Card.Title>
+            <Card.Title class="text-sm font-medium">Non Paganti</Card.Title>
             <UserX class="h-4 w-4 text-red-600" />
         </Card.Header>
         <Card.Content>
-            <div class="text-2xl font-bold">{stats.suspended}</div>
+            <div class="text-2xl font-bold">{stats.unpaid}</div>
             <p class="text-xs text-muted-foreground mt-1">
                 <span class="text-red-600"
-                    >{Math.round((stats.suspended / stats.total) * 100)}%</span
+                    >{Math.round((stats.unpaid / stats.total) * 100)}%</span
                 > del totale
             </p>
         </Card.Content>
@@ -67,14 +67,18 @@
         <Card.Header
             class="flex flex-row items-center justify-between space-y-0 pb-2"
         >
-            <Card.Title class="text-sm font-medium">Scaduti</Card.Title>
+            <Card.Title class="text-sm font-medium"
+                >Esclusione Deliberata</Card.Title
+            >
             <Clock class="h-4 w-4 text-yellow-600" />
         </Card.Header>
         <Card.Content>
-            <div class="text-2xl font-bold">{stats.expired}</div>
+            <div class="text-2xl font-bold">{stats.exclusionDeliberated}</div>
             <p class="text-xs text-muted-foreground mt-1">
                 <span class="text-yellow-600"
-                    >{Math.round((stats.expired / stats.total) * 100)}%</span
+                    >{Math.round(
+                        (stats.exclusionDeliberated / stats.total) * 100,
+                    )}%</span
                 > del totale
             </p>
         </Card.Content>

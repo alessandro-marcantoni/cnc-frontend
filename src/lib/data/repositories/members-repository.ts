@@ -1,6 +1,7 @@
 import { writable, derived, get } from "svelte/store";
 import type { Member } from "$model/members/member";
 import { mockMembers } from "$lib/data/mock-members";
+import { parseDate, type DateValue } from "@internationalized/date";
 
 // Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
@@ -36,13 +37,37 @@ async function fetchMembersFromAPI(): Promise<Member[]> {
     return mockMembers;
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/members`);
+  const response = await fetch(`${API_BASE_URL}/api/v1.0/members`);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch members: ${response.statusText}`);
   }
 
-  return response.json();
+  const jsonResponse = await response.json();
+
+  const members: Member[] = jsonResponse.map((member: any) => ({
+    id: member.id,
+    firstName: member.firstName,
+    lastName: member.lastName,
+    email: member.email,
+    birthDate: parseDate(member.birthDate),
+    membership: {
+      id: member.membership.id,
+      status: member.membership.status,
+      number: member.membership.number,
+      validFrom: parseDate(member.membership.validFrom),
+      expiresAt: parseDate(member.membership.expiresAt),
+    },
+    addresses: member.addresses.map((address: any) => ({
+      city: address.city,
+      country: address.country,
+      street: address.street,
+      streetNumber: address.streetNumber,
+      zipCode: address.zipCode,
+    })),
+  }));
+
+  return members;
 }
 
 /**

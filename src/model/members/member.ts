@@ -1,8 +1,10 @@
+import type { DateValue } from "@internationalized/date";
+
 export type Member = {
   id: number;
   firstName: string;
   lastName: string;
-  birthDate: Date;
+  birthDate: DateValue;
   email: string;
   addresses: Address[];
   phoneNumbers: PhoneNumber[];
@@ -25,8 +27,12 @@ export type Membership = {
   id: number;
   number: number;
   status: MembershipStatus;
-  validFrom: Date;
-  expiresAt: Date;
+  validFrom: DateValue;
+  expiresAt: DateValue;
 };
 
-export type MembershipStatus = "ACTIVE" | "SUSPENDED" | "EXPIRED";
+export type MembershipStatus =
+  | "ACTIVE"
+  | "UNPAID"
+  | "EXCLUSION_DELIBERATED"
+  | "EXCLUDED";

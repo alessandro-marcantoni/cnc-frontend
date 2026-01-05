@@ -1,20 +1,34 @@
 <script lang="ts">
     import * as Table from "$lib/components/ui/table";
     import { Button } from "$lib/components/ui/button";
-    import { Badge } from "$lib/components/ui/badge";
+    import { Badge, type BadgeVariant } from "$lib/components/ui/badge";
     import { Input } from "$lib/components/ui/input";
     import MultiSelect from "$lib/components/ui/multi-select.svelte";
     import { ChevronUp, ChevronDown } from "@lucide/svelte";
     import type { Member, MembershipStatus } from "$model/members/member";
+    import { getLocalTimeZone, type DateValue } from "@internationalized/date";
 
-    const statusOptions = [
-        { value: "ACTIVE", label: "Attivo", variant: "default" as const },
+    const statusOptions: {
+        value: MembershipStatus;
+        label: string;
+        variant: BadgeVariant;
+    }[] = [
+        { value: "ACTIVE", label: "Attivo", variant: "default" },
         {
-            value: "SUSPENDED",
-            label: "Sospeso",
-            variant: "destructive" as const,
+            value: "UNPAID",
+            label: "Non pagato",
+            variant: "secondary",
         },
-        { value: "EXPIRED", label: "Scaduto", variant: "secondary" as const },
+        {
+            value: "EXCLUSION_DELIBERATED",
+            label: "Da escludere",
+            variant: "destructive",
+        },
+        {
+            value: "EXCLUDED",
+            label: "Escluso",
+            variant: "outline",
+        },
     ];
 
     // Props
@@ -28,13 +42,28 @@
     let searchQuery = $state("");
     let statusFilter = $state<MembershipStatus[]>([
         "ACTIVE",
-        "SUSPENDED",
-        "EXPIRED",
+        "UNPAID",
+        "EXCLUSION_DELIBERATED",
     ]);
     let sortColumn = $state<string | null>(null);
     let sortDirection = $state<"asc" | "desc">("asc");
     let currentPage = $state(0);
     let pageSize = 50;
+
+    // Format date as dd/MM/yyyy
+    function formatDate(date: Date | DateValue): string {
+        if (date instanceof Date) {
+            const day = date.getDate().toString().padStart(2, "0");
+            const month = (date.getMonth() + 1).toString().padStart(2, "0");
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        } else {
+            const day = date.day.toString().padStart(2, "0");
+            const month = date.month.toString().padStart(2, "0");
+            const year = date.year.toString();
+            return `${day}/${month}/${year}`;
+        }
+    }
 
     // Filter members
     const filteredMembers = $derived.by(() => {
@@ -70,13 +99,9 @@
                         aVal = `${a.firstName} ${a.lastName}`;
                         bVal = `${b.firstName} ${b.lastName}`;
                         break;
-                    case "email":
-                        aVal = a.email;
-                        bVal = b.email;
-                        break;
-                    case "phone":
-                        aVal = a.phoneNumbers[0]?.number || "";
-                        bVal = b.phoneNumbers[0]?.number || "";
+                    case "birthDate":
+                        aVal = a.birthDate.toDate(getLocalTimeZone()).getTime();
+                        bVal = b.birthDate.toDate(getLocalTimeZone()).getTime();
                         break;
                     case "location":
                         aVal = a.addresses[0]
@@ -91,12 +116,20 @@
                         bVal = b.membership.status;
                         break;
                     case "joinedDate":
-                        aVal = new Date(a.membership.validFrom).getTime();
-                        bVal = new Date(b.membership.validFrom).getTime();
+                        aVal = a.membership.validFrom
+                            .toDate(getLocalTimeZone())
+                            .getTime();
+                        bVal = b.membership.validFrom
+                            .toDate(getLocalTimeZone())
+                            .getTime();
                         break;
                     case "expiresAt":
-                        aVal = new Date(a.membership.expiresAt).getTime();
-                        bVal = new Date(b.membership.expiresAt).getTime();
+                        aVal = a.membership.expiresAt
+                            .toDate(getLocalTimeZone())
+                            .getTime();
+                        bVal = b.membership.expiresAt
+                            .toDate(getLocalTimeZone())
+                            .getTime();
                         break;
                     default:
                         return 0;
@@ -137,17 +170,18 @@
         return sortColumn === column && sortDirection === "desc";
     }
 
-    function getStatusBadgeVariant(status: string) {
-        switch (status.toUpperCase()) {
-            case "ACTIVE":
-                return "default";
-            case "SUSPENDED":
-                return "destructive";
-            case "EXPIRED":
-                return "secondary";
-            default:
-                return "outline";
-        }
+    function getStatusBadgeVariant(status: MembershipStatus): BadgeVariant {
+        return (
+            statusOptions.find((option) => option.value === status)?.variant ||
+            "outline"
+        );
+    }
+
+    function getStatusLabel(status: MembershipStatus): string {
+        return (
+            statusOptions.find((option) => option.value === status)?.label ||
+            "Unknown"
+        );
     }
 
     function nextPage() {
@@ -198,7 +232,7 @@
                 options={statusOptions}
                 bind:selected={statusFilter}
                 placeholder="Seleziona stato..."
-                class="w-[280px]"
+                class="w-70"
             />
         </div>
     </div>
@@ -208,7 +242,7 @@
         <Table.Root>
             <Table.Header>
                 <Table.Row>
-                    <Table.Head class="w-[100px]">
+                    <Table.Head class="w-25">
                         <button
                             class="flex items-center gap-1 font-medium hover:text-foreground"
                             onclick={() => handleSort("memberNumber")}
@@ -237,25 +271,12 @@
                     <Table.Head>
                         <button
                             class="flex items-center gap-1 font-medium hover:text-foreground"
-                            onclick={() => handleSort("email")}
+                            onclick={() => handleSort("birthDate")}
                         >
-                            Email
-                            {#if isSortedAsc("email")}
+                            Data di nascita
+                            {#if isSortedAsc("birthDate")}
                                 <ChevronUp class="h-4 w-4" />
-                            {:else if isSortedDesc("email")}
-                                <ChevronDown class="h-4 w-4" />
-                            {/if}
-                        </button>
-                    </Table.Head>
-                    <Table.Head>
-                        <button
-                            class="flex items-center gap-1 font-medium hover:text-foreground"
-                            onclick={() => handleSort("phone")}
-                        >
-                            Telefono
-                            {#if isSortedAsc("phone")}
-                                <ChevronUp class="h-4 w-4" />
-                            {:else if isSortedDesc("phone")}
+                            {:else if isSortedDesc("birthDate")}
                                 <ChevronDown class="h-4 w-4" />
                             {/if}
                         </button>
@@ -328,9 +349,8 @@
                                 {member.firstName}
                                 {member.lastName}
                             </Table.Cell>
-                            <Table.Cell>{member.email}</Table.Cell>
                             <Table.Cell>
-                                {member.phoneNumbers[0]?.number || "-"}
+                                {formatDate(member.birthDate)}
                             </Table.Cell>
                             <Table.Cell class="text-muted-foreground">
                                 {#if member.addresses[0]}
@@ -346,18 +366,14 @@
                                         member.membership.status,
                                     )}
                                 >
-                                    {member.membership.status}
+                                    {getStatusLabel(member.membership.status)}
                                 </Badge>
                             </Table.Cell>
                             <Table.Cell>
-                                {new Date(
-                                    member.membership.validFrom,
-                                ).toLocaleDateString()}
+                                {formatDate(member.membership.validFrom)}
                             </Table.Cell>
                             <Table.Cell>
-                                {new Date(
-                                    member.membership.expiresAt,
-                                ).toLocaleDateString()}
+                                {formatDate(member.membership.expiresAt)}
                             </Table.Cell>
                         </Table.Row>
                     {/each}

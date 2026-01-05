@@ -71,7 +71,7 @@
         <div class="flex gap-1 flex-wrap">
             {#if selected.length === 0}
                 <span class="text-muted-foreground">{placeholder}</span>
-            {:else if selected.length <= 3}
+            {:else if selected.length <= 2}
                 {#each selected as value (value)}
                     <Badge variant={getVariant(value)} class="text-xs">
                         {getLabel(value)}
@@ -79,7 +79,7 @@
                 {/each}
             {:else}
                 <Badge variant="secondary" class="text-xs">
-                    {selected.length} selected
+                    {selected.length} selezionati
                 </Badge>
             {/if}
         </div>
@@ -90,13 +90,13 @@
         <div
             class="absolute z-50 mt-2 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md outline-none animate-in fade-in-80"
         >
-            <div class="max-h-[300px] overflow-auto">
+            <div class="max-h-75 overflow-auto">
                 {#each options as option (option.value)}
                     <div
                         role="option"
                         tabindex="0"
                         aria-selected={selected.includes(option.value)}
-                        class="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                        class="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50"
                         onclick={() => toggleOption(option.value)}
                         onkeydown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
