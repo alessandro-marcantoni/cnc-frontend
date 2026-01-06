@@ -1,7 +1,6 @@
 import { writable, derived, get } from "svelte/store";
-import type { MemberDetail } from "$model/members/member-detail";
-import { mockMemberDetails } from "$lib/data/mock-member-details";
-import { fetchMemberDetail } from "$lib/data/api";
+import type { RentedFacility } from "$model/facilities/rented-facility";
+import { fetchRentedFacilities } from "$lib/data/api";
 
 // Configuration
 const USE_MOCK_DATA = import.meta.env.DEV && !import.meta.env.VITE_API_URL;
@@ -9,55 +8,57 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 // Cache structure
 interface CacheEntry {
-  data: MemberDetail;
+  data: RentedFacility[];
   timestamp: number;
 }
 
 // Store state
-interface MemberDetailState {
+interface RentedFacilitiesState {
   cache: Map<number, CacheEntry>;
   loading: Set<number>;
   errors: Map<number, string>;
 }
 
-const initialState: MemberDetailState = {
+const initialState: RentedFacilitiesState = {
   cache: new Map(),
   loading: new Set(),
   errors: new Map(),
 };
 
 // Internal store
-const memberDetailStore = writable<MemberDetailState>(initialState);
+const rentedFacilitiesStore = writable<RentedFacilitiesState>(initialState);
 
 // Public derived stores
-export const isLoadingMemberDetail = derived(
-  memberDetailStore,
+export const isLoadingRentedFacilities = derived(
+  rentedFacilitiesStore,
   ($store) => (memberId: number) => $store.loading.has(memberId),
 );
 
-export const memberDetailError = derived(
-  memberDetailStore,
+export const rentedFacilitiesError = derived(
+  rentedFacilitiesStore,
   ($store) => (memberId: number) => $store.errors.get(memberId) || null,
 );
 
-export const memberDetail = derived(
-  memberDetailStore,
-  ($store) => (memberId: number) => $store.cache.get(memberId)?.data || null,
+export const rentedFacilities = derived(
+  rentedFacilitiesStore,
+  ($store) => (memberId: number) => $store.cache.get(memberId)?.data || [],
 );
 
 /**
- * Fetches member detail from API or mock data
+ * Fetches rented facilities from API or mock data
  */
-async function fetchMemberDetailData(memberId: number): Promise<MemberDetail> {
+async function fetchRentedFacilitiesData(
+  memberId: number,
+): Promise<RentedFacility[]> {
   if (USE_MOCK_DATA) {
-    const memberDetail = mockMemberDetails[memberId];
-    if (!memberDetail) {
-      throw new Error(`Member with ID ${memberId} not found in mock data`);
-    }
-    return memberDetail;
+    console.info("Using mock data for rented facilities (no API URL configured)");
+    // Simulate network delay in development
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    // Return empty array for mock data (or add mock data if needed)
+    return [];
   }
 
-  return fetchMemberDetail(memberId);
+  return fetchRentedFacilities(memberId);
 }
 
 /**
@@ -69,15 +70,15 @@ function isCacheValid(entry: CacheEntry | undefined): boolean {
 }
 
 /**
- * Loads member detail with caching
- * @param memberId - The ID of the member to load
+ * Loads rented facilities for a member with caching
+ * @param memberId - The ID of the member
  * @param forceRefresh - If true, bypass cache and fetch fresh data
  */
-export async function loadMemberDetail(
+export async function loadRentedFacilities(
   memberId: number,
   forceRefresh = false,
-): Promise<MemberDetail> {
-  const state = get(memberDetailStore);
+): Promise<RentedFacility[]> {
+  const state = get(rentedFacilitiesStore);
 
   // Check cache
   const cachedEntry = state.cache.get(memberId);
@@ -90,7 +91,7 @@ export async function loadMemberDetail(
     // Wait for the ongoing request
     return new Promise((resolve, reject) => {
       const checkInterval = setInterval(() => {
-        const currentState = get(memberDetailStore);
+        const currentState = get(rentedFacilitiesStore);
         if (!currentState.loading.has(memberId)) {
           clearInterval(checkInterval);
           const entry = currentState.cache.get(memberId);
@@ -98,7 +99,7 @@ export async function loadMemberDetail(
             resolve(entry.data);
           } else {
             const error = currentState.errors.get(memberId);
-            reject(new Error(error || "Failed to load member detail"));
+            reject(new Error(error || "Failed to load rented facilities"));
           }
         }
       }, 100);
@@ -106,7 +107,7 @@ export async function loadMemberDetail(
   }
 
   // Start loading
-  memberDetailStore.update((state) => ({
+  rentedFacilitiesStore.update((state) => ({
     ...state,
     loading: new Set(state.loading).add(memberId),
     errors: (() => {
@@ -117,18 +118,13 @@ export async function loadMemberDetail(
   }));
 
   try {
-    // Simulate network delay in development
-    if (USE_MOCK_DATA) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-
-    const memberDetail = await fetchMemberDetailData(memberId);
+    const facilities = await fetchRentedFacilitiesData(memberId);
 
     // Update cache
-    memberDetailStore.update((state) => {
+    rentedFacilitiesStore.update((state) => {
       const cache = new Map(state.cache);
       cache.set(memberId, {
-        data: memberDetail,
+        data: facilities,
         timestamp: Date.now(),
       });
 
@@ -142,13 +138,13 @@ export async function loadMemberDetail(
       };
     });
 
-    return memberDetail;
+    return facilities;
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error occurred";
 
     // Update error state
-    memberDetailStore.update((state) => {
+    rentedFacilitiesStore.update((state) => {
       const errors = new Map(state.errors);
       errors.set(memberId, errorMessage);
 
@@ -169,17 +165,57 @@ export async function loadMemberDetail(
 /**
  * Clears the cache for a specific member or all members
  */
-export function clearMemberDetailCache(memberId?: number): void {
+export function clearRentedFacilitiesCache(memberId?: number): void {
   if (memberId !== undefined) {
-    memberDetailStore.update((state) => {
+    rentedFacilitiesStore.update((state) => {
       const cache = new Map(state.cache);
       cache.delete(memberId);
       return { ...state, cache };
     });
   } else {
-    memberDetailStore.update((state) => ({
+    rentedFacilitiesStore.update((state) => ({
       ...state,
       cache: new Map(),
     }));
   }
+}
+
+/**
+ * Add a rented facility to the cache (optimistic update)
+ */
+export function addRentedFacilityToCache(
+  memberId: number,
+  facility: RentedFacility,
+): void {
+  rentedFacilitiesStore.update((state) => {
+    const cache = new Map(state.cache);
+    const entry = cache.get(memberId);
+    if (entry) {
+      cache.set(memberId, {
+        data: [...entry.data, facility],
+        timestamp: Date.now(),
+      });
+    }
+    return { ...state, cache };
+  });
+}
+
+/**
+ * Remove a rented facility from the cache (optimistic update)
+ */
+export function removeRentedFacilityFromCache(
+  memberId: number,
+  facilityId: number,
+): void {
+  rentedFacilitiesStore.update((state) => {
+    const cache = new Map(state.cache);
+    const entry = cache.get(memberId);
+    if (entry) {
+      cache.set(memberId, {
+        data: entry.data.filter((f) => f.id !== facilityId),
+        timestamp: Date.now(),
+      });
+    }
+    return { ...state, cache };
+  });
 }

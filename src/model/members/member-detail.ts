@@ -10,5 +10,4 @@ export type MemberDetail = {
   addresses: Address[];
   phoneNumbers: PhoneNumber[];
   memberships: Membership[];
-  rentedFacilities: RentedFacility[];
 };

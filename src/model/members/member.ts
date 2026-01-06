@@ -1,3 +1,4 @@
+import type { Payment } from "$model/payments/payment";
 import type { DateValue } from "@internationalized/date";
 
 export type Member = {
@@ -29,6 +30,7 @@ export type Membership = {
   status: MembershipStatus;
   validFrom: DateValue;
   expiresAt: DateValue;
+  payment: Payment | null;
 };
 
 export type MembershipStatus =

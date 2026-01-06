@@ -1,24 +1,65 @@
-# Members Repository Documentation
+# Repositories Documentation
 
-A Svelte store-based repository that manages member data with automatic caching and API integration.
+Svelte store-based repositories that manage application data with automatic caching and API integration.
+
+## Overview
+
+The repository layer manages application state, caching, and provides reactive Svelte stores for components. It acts as an intermediary between the UI components and the API layer.
+
+## Architecture
+
+```
+Component → Repository → API Layer → Backend
+         ← Store      ← Transform   ← Response
+```
+
+- **Repositories**: Handle caching, state management, and provide reactive stores
+- **API Layer**: Handle HTTP requests and data transformation (see `../api/README.md`)
 
 ## Features
 
-- ✅ **Automatic Caching**: Caches data for 5 minutes to reduce API calls
-- ✅ **Reactive Stores**: Subscribe to member data changes reactively
+- ✅ **Automatic Caching**: Caches data to reduce API calls
+- ✅ **Reactive Stores**: Subscribe to data changes reactively
 - ✅ **Loading States**: Built-in loading and error state management
 - ✅ **Optimistic Updates**: Update cache immediately for better UX
 - ✅ **Development Fallback**: Automatically uses mock data when API is unavailable
-- ✅ **Type-Safe**: Full TypeScript support with Member types
+- ✅ **Type-Safe**: Full TypeScript support
+
+## Available Repositories
+
+### Members Repository (`members-repository.ts`)
+
+Manages the list of all members with caching and reactive stores.
+
+### Member Detail Repository (`member-detail-repository.ts`)
+
+Manages individual member details with per-member caching.
+
+### Rented Facilities Repository (`rented-facilities-repository.ts`)
+
+Manages rented facilities for members with per-member caching.
 
 ## Quick Start
 
-### Basic Usage
+### Importing from Repositories
+
+```typescript
+// Import from central index
+import { loadMembers, members, isLoadingMembers } from "$lib/data/repositories";
+
+// Or import from specific repository
+import {
+  loadMembers,
+  members,
+} from "$lib/data/repositories/members-repository";
+```
+
+### Basic Usage Example
 
 ```svelte
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { members, loadMembers, isLoadingMembers } from '$lib/data/repositories/members-repository';
+    import { members, loadMembers, isLoadingMembers } from '$lib/data/repositories';
 
     onMount(async () => {
         await loadMembers();
@@ -36,7 +77,9 @@ A Svelte store-based repository that manages member data with automatic caching 
 {/if}
 ```
 
-## API Reference
+---
+
+## Members Repository API
 
 ### Loading Functions
 
@@ -89,7 +132,9 @@ These functions update the cache immediately without API calls. Use them after s
 Adds a member to the cache.
 
 ```typescript
-const newMember = { /* ... */ };
+const newMember = {
+  /* ... */
+};
 await createMemberAPI(newMember);
 addMemberToCache(newMember);
 ```
@@ -99,7 +144,7 @@ addMemberToCache(newMember);
 Updates an existing member in the cache.
 
 ```typescript
-const updatedMember = { ...existingMember, email: 'new@email.com' };
+const updatedMember = { ...existingMember, email: "new@email.com" };
 await updateMemberAPI(updatedMember);
 updateMemberInCache(updatedMember);
 ```
@@ -208,7 +253,7 @@ Returns a derived store for a specific member.
 ```svelte
 <script>
     import { getMemberById } from '$lib/data/repositories/members-repository';
-    
+
     const member = getMemberById(1);
 </script>
 
@@ -226,7 +271,7 @@ Returns a derived store filtered by membership status.
 ```svelte
 <script>
     import { getMembersByStatus } from '$lib/data/repositories/members-repository';
-    
+
     const activeMembers = getMembersByStatus('ACTIVE');
     const suspendedMembers = getMembersByStatus('SUSPENDED');
 </script>
@@ -234,6 +279,178 @@ Returns a derived store filtered by membership status.
 <p>Active: {$activeMembers.length}</p>
 <p>Suspended: {$suspendedMembers.length}</p>
 ```
+
+---
+
+## Member Detail Repository API
+
+### Loading Functions
+
+#### `loadMemberDetail(memberId: number, forceRefresh?: boolean): Promise<MemberDetail>`
+
+Loads detailed information for a specific member.
+
+- **Parameters**:
+  - `memberId`: The ID of the member to load
+  - `forceRefresh` (optional): If `true`, bypasses cache and fetches fresh data
+- **Returns**: Promise resolving to member detail
+- **Cache Duration**: 5 minutes
+
+**Example:**
+
+```typescript
+await loadMemberDetail(123);
+await loadMemberDetail(123, true); // Force refresh
+```
+
+### Cache Management
+
+#### `clearMemberDetailCache(memberId?: number): void`
+
+Clears the cache for a specific member or all members.
+
+```typescript
+clearMemberDetailCache(123); // Clear specific member
+clearMemberDetailCache(); // Clear all
+```
+
+### Reactive Stores
+
+These are functions that return derived stores for specific members:
+
+#### `memberDetail(memberId: number)`
+
+```svelte
+<script>
+    import { memberDetail } from '$lib/data/repositories';
+    const detail = memberDetail(123);
+</script>
+
+{#if $detail}
+    <h1>{$detail.firstName} {$detail.lastName}</h1>
+{/if}
+```
+
+#### `isLoadingMemberDetail(memberId: number)`
+
+```svelte
+<script>
+    import { isLoadingMemberDetail } from '$lib/data/repositories';
+    const loading = isLoadingMemberDetail(123);
+</script>
+
+{#if $loading}
+    <div>Loading...</div>
+{/if}
+```
+
+#### `memberDetailError(memberId: number)`
+
+```svelte
+<script>
+    import { memberDetailError } from '$lib/data/repositories';
+    const error = memberDetailError(123);
+</script>
+
+{#if $error}
+    <div class="error">{$error}</div>
+{/if}
+```
+
+---
+
+## Rented Facilities Repository API
+
+### Loading Functions
+
+#### `loadRentedFacilities(memberId: number, forceRefresh?: boolean): Promise<RentedFacility[]>`
+
+Loads rented facilities for a specific member.
+
+- **Parameters**:
+  - `memberId`: The ID of the member
+  - `forceRefresh` (optional): If `true`, bypasses cache and fetches fresh data
+- **Returns**: Promise resolving to array of rented facilities
+- **Cache Duration**: 5 minutes
+
+**Example:**
+
+```typescript
+await loadRentedFacilities(123);
+await loadRentedFacilities(123, true); // Force refresh
+```
+
+### Cache Management
+
+#### `clearRentedFacilitiesCache(memberId?: number): void`
+
+Clears the cache for a specific member or all members.
+
+```typescript
+clearRentedFacilitiesCache(123); // Clear specific member
+clearRentedFacilitiesCache(); // Clear all
+```
+
+### Optimistic Updates
+
+#### `addRentedFacilityToCache(memberId: number, facility: RentedFacility): void`
+
+Adds a facility to the cache.
+
+```typescript
+addRentedFacilityToCache(123, newFacility);
+```
+
+#### `removeRentedFacilityFromCache(memberId: number, facilityId: number): void`
+
+Removes a facility from the cache.
+
+```typescript
+removeRentedFacilityFromCache(123, 456);
+```
+
+### Reactive Stores
+
+#### `rentedFacilities(memberId: number)`
+
+```svelte
+<script>
+    import { rentedFacilities } from '$lib/data/repositories';
+    const facilities = rentedFacilities(123);
+</script>
+
+{#each $facilities as facility}
+    <div>{facility.facilityName}</div>
+{/each}
+```
+
+#### `isLoadingRentedFacilities(memberId: number)`
+
+```svelte
+<script>
+    import { isLoadingRentedFacilities } from '$lib/data/repositories';
+    const loading = isLoadingRentedFacilities(123);
+</script>
+
+{#if $loading}
+    <div>Loading facilities...</div>
+{/if}
+```
+
+#### `rentedFacilitiesError(memberId: number)`
+
+```svelte
+<script>
+    import { rentedFacilitiesError } from '$lib/data/repositories';
+    const error = rentedFacilitiesError(123);
+</script>
+
+{#if $error}
+    <div class="error">{$error}</div>
+{/if}
+```
+
+---
 
 ## Configuration
 
@@ -252,13 +469,15 @@ VITE_API_URL=http://localhost:8080
 
 Default: 5 minutes (300,000 ms)
 
-To change, edit `CACHE_DURATION` in `members-repository.ts`:
+To change, edit `CACHE_DURATION` in each repository file:
 
 ```typescript
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 ```
 
-## Complete Example
+## Complete Examples
+
+### Members List
 
 ```svelte
 <script lang="ts">
@@ -271,7 +490,7 @@ const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
         cacheAge,
         loadMembers,
         getMembersByStatus,
-    } from '$lib/data/repositories/members-repository';
+    } from '$lib/data/repositories';
 
     const activeMembers = getMembersByStatus('ACTIVE');
 
@@ -290,7 +509,7 @@ const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
 <div>
     <h1>Members ({$membersCount})</h1>
-    
+
     {#if $cacheAge}
         <p class="text-muted">
             Loaded {$cacheAge} seconds ago
@@ -318,6 +537,62 @@ const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
                 {/each}
             </ul>
         </div>
+    {/if}
+</div>
+```
+
+### Member Detail with Facilities
+
+```svelte
+<script lang="ts">
+    import { onMount } from 'svelte';
+    import {
+        loadMemberDetail,
+        memberDetail,
+        isLoadingMemberDetail,
+        loadRentedFacilities,
+        rentedFacilities,
+        isLoadingRentedFacilities,
+    } from '$lib/data/repositories';
+
+    let memberId = 123;
+    const detail = memberDetail(memberId);
+    const detailLoading = isLoadingMemberDetail(memberId);
+    const facilities = rentedFacilities(memberId);
+    const facilitiesLoading = isLoadingRentedFacilities(memberId);
+
+    onMount(async () => {
+        await Promise.all([
+            loadMemberDetail(memberId),
+            loadRentedFacilities(memberId)
+        ]);
+    });
+</script>
+
+<div>
+    {#if $detailLoading}
+        <p>Loading member details...</p>
+    {:else if $detail}
+        <h1>{$detail.firstName} {$detail.lastName}</h1>
+        <p>{$detail.email}</p>
+
+        <h2>Rented Facilities</h2>
+        {#if $facilitiesLoading}
+            <p>Loading facilities...</p>
+        {:else if $facilities.length > 0}
+            <ul>
+                {#each $facilities as facility}
+                    <li>
+                        {facility.facilityName} - {facility.facilityIdentifier}
+                        {#if facility.boatInfo}
+                            <span>Boat: {facility.boatInfo.name}</span>
+                        {/if}
+                    </li>
+                {/each}
+            </ul>
+        {:else}
+            <p>No rented facilities</p>
+        {/if}
     {/if}
 </div>
 ```
@@ -386,7 +661,7 @@ await loadMembers(); // Fetches from API
     async function deleteMember(id: number) {
         // Remove from cache immediately
         removeMemberFromCache(id);
-        
+
         try {
             await deleteMemberAPI(id);
         } catch (error) {
@@ -433,6 +708,33 @@ await loadMembers(true); // Refresh to ensure consistency
 
 **Solution**: Ensure `Member` type in `$model/members/member.ts` matches your API response structure.
 
+## Relationship with API Layer
+
+Repositories use the API layer for all HTTP communication:
+
+```typescript
+// Repository uses API functions
+import { fetchMembers } from "$lib/data/api";
+
+async function fetchMembersData(): Promise<Member[]> {
+  if (USE_MOCK_DATA) {
+    return mockMembers;
+  }
+  return fetchMembers(); // Calls API layer
+}
+```
+
+See `../api/README.md` for details on the API layer.
+
+## Best Practices Summary
+
+1. **Use repositories in components**, not API functions directly
+2. **Subscribe to stores** for reactive updates
+3. **Handle loading and error states** for better UX
+4. **Use optimistic updates** for instant feedback
+5. **Force refresh** after mutations to ensure data consistency
+6. **Clear cache** when needed to free memory
+
 ## Future Enhancements
 
 Potential improvements:
@@ -443,3 +745,4 @@ Potential improvements:
 - [ ] IndexedDB persistence for offline support
 - [ ] Request deduplication
 - [ ] Retry logic with exponential backoff
+- [ ] Background refresh for stale data

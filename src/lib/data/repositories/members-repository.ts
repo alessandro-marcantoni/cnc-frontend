@@ -1,10 +1,9 @@
 import { writable, derived, get } from "svelte/store";
 import type { Member } from "$model/members/member";
 import { mockMembers } from "$lib/data/mock-members";
-import { parseDate, type DateValue } from "@internationalized/date";
+import { fetchMembers } from "$lib/data/api";
 
 // Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 const USE_MOCK_DATA = import.meta.env.DEV && !import.meta.env.VITE_API_URL;
 
 interface MembersCache {
@@ -26,9 +25,9 @@ const initialCache: MembersCache = {
 const membersCache = writable<MembersCache>(initialCache);
 
 /**
- * Fetch members from the API
+ * Fetch members from the API or mock data
  */
-async function fetchMembersFromAPI(): Promise<Member[]> {
+async function fetchMembersData(): Promise<Member[]> {
   // Use mock data in development if no API URL is configured
   if (USE_MOCK_DATA) {
     console.info("Using mock data (no API URL configured)");
@@ -37,37 +36,7 @@ async function fetchMembersFromAPI(): Promise<Member[]> {
     return mockMembers;
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/v1.0/members`);
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch members: ${response.statusText}`);
-  }
-
-  const jsonResponse = await response.json();
-
-  const members: Member[] = jsonResponse.map((member: any) => ({
-    id: member.id,
-    firstName: member.firstName,
-    lastName: member.lastName,
-    email: member.email,
-    birthDate: parseDate(member.birthDate),
-    membership: {
-      id: member.membership.id,
-      status: member.membership.status,
-      number: member.membership.number,
-      validFrom: parseDate(member.membership.validFrom),
-      expiresAt: parseDate(member.membership.expiresAt),
-    },
-    addresses: member.addresses.map((address: any) => ({
-      city: address.city,
-      country: address.country,
-      street: address.street,
-      streetNumber: address.streetNumber,
-      zipCode: address.zipCode,
-    })),
-  }));
-
-  return members;
+  return fetchMembers();
 }
 
 /**
@@ -89,7 +58,7 @@ export async function loadMembers(forceRefresh = false): Promise<Member[]> {
   }));
 
   try {
-    const data = await fetchMembersFromAPI();
+    const data = await fetchMembersData();
 
     // Update cache with fresh data
     membersCache.set({

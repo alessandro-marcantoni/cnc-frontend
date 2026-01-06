@@ -7,6 +7,7 @@
     import { ChevronUp, ChevronDown } from "@lucide/svelte";
     import type { Member, MembershipStatus } from "$model/members/member";
     import { getLocalTimeZone, type DateValue } from "@internationalized/date";
+    import { goto } from "@mateothegreat/svelte5-router";
 
     const statusOptions: {
         value: MembershipStatus;
@@ -197,8 +198,7 @@
     }
 
     function navigateToMember(memberId: number) {
-        window.history.pushState({}, "", `/members/${memberId}`);
-        window.dispatchEvent(new PopStateEvent("popstate"));
+        goto(`/members/${memberId}`);
     }
 
     // Reset to first page when search query or status filter changes
