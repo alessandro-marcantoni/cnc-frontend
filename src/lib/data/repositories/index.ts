@@ -30,3 +30,12 @@ export {
   rentedFacilitiesError,
   rentedFacilities,
 } from "./rented-facilities-repository";
+
+export {
+  loadFacilitiesCatalog,
+  clearFacilitiesCatalogCache,
+  facilitiesCatalog,
+  isLoadingFacilitiesCatalog,
+  facilitiesCatalogError,
+  facilitiesCount,
+} from "./facilities-catalog-repository";
