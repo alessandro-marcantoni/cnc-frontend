@@ -3,4 +3,5 @@ export { fetchMemberDetail } from "./member-detail-api";
 export {
   fetchRentedFacilities,
   fetchFacilitiesCatalog,
+  fetchFacilitiesByType,
 } from "./facilities-api";

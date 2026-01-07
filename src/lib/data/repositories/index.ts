@@ -39,3 +39,15 @@ export {
   facilitiesCatalogError,
   facilitiesCount,
 } from "./facilities-catalog-repository";
+
+export {
+  loadFacilitiesByType,
+  clearFacilitiesByTypeCache,
+  clearTypeCache,
+  facilitiesByType,
+  isLoadingFacilitiesByType,
+  facilitiesByTypeError,
+  currentFacilityTypeId,
+  availableFacilities,
+  rentedFacilitiesByType,
+} from "./facilities-by-type-repository";

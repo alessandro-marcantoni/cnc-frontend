@@ -1,5 +1,6 @@
 import type { RentedFacility } from "$model/facilities/rented-facility";
 import type { FacilityType } from "$model/facilities/facility-type";
+import type { FacilityWithStatus } from "$model/facilities/facility-with-status";
 
 // Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
@@ -27,6 +28,39 @@ export async function fetchFacilitiesCatalog(): Promise<FacilityType[]> {
   }));
 
   return facilityTypes;
+}
+
+/**
+ * Fetch facilities by facility type ID from the API
+ */
+export async function fetchFacilitiesByType(
+  facilityTypeId: number,
+): Promise<FacilityWithStatus[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1.0/facilities?facility_type_id=${facilityTypeId}`,
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch facilities by type: ${response.statusText}`,
+    );
+  }
+
+  const data = await response.json();
+
+  // Transform API response to FacilityWithStatus type
+  const facilities: FacilityWithStatus[] = data.map((facility: any) => ({
+    id: facility.id,
+    facilityTypeId: facility.facilityTypeId,
+    identifier: facility.identifier,
+    facilityTypeName: facility.facilityTypeName,
+    facilityTypeDescription: facility.facilityTypeDescription,
+    suggestedPrice: facility.suggestedPrice,
+    isRented: facility.isRented,
+    expiresAt: facility.expiresAt,
+  }));
+
+  return facilities;
 }
 
 /**

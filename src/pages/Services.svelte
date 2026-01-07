@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
+    import { goto } from "@mateothegreat/svelte5-router";
     import Header from "$lib/components/shared/header.svelte";
     import * as Card from "$lib/components/ui/card";
     import { Input } from "$lib/components/ui/input";
@@ -33,6 +34,10 @@
             style: "currency",
             currency: "EUR",
         }).format(price);
+    }
+
+    function navigateToFacilityType(facilityTypeId: number) {
+        goto(`/services/${facilityTypeId}`);
     }
 </script>
 
@@ -101,7 +106,10 @@
         <!-- Services Grid -->
         <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {#each filteredFacilities as facility (facility.id)}
-                <Card.Root class="transition-shadow hover:shadow-md">
+                <Card.Root
+                    class="cursor-pointer transition-all hover:shadow-lg hover:scale-105"
+                    onclick={() => navigateToFacilityType(facility.id)}
+                >
                     <Card.Header>
                         <Card.Title>{facility.name}</Card.Title>
                     </Card.Header>

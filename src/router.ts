@@ -3,6 +3,7 @@ import Home from "./pages/Home.svelte";
 import Services from "./pages/Services.svelte";
 import MemberDetail from "./pages/MemberDetail.svelte";
 import Members from "./pages/Members.svelte";
+import FacilityTypeDetail from "./pages/FacilityTypeDetail.svelte";
 
 const homePaths: string[] = ["", "/"];
 const openPaths: string[] = ["/login"];
@@ -32,6 +33,13 @@ export const routes: RouteConfig[] = [
   {
     path: /^\/members(?:\/(?<id>[0-9]+))$/,
     component: MemberDetail,
+    hooks: {
+      pre: homeGuard,
+    },
+  },
+  {
+    path: /^\/services(?:\/(?<id>[0-9]+))$/,
+    component: FacilityTypeDetail,
     hooks: {
       pre: homeGuard,
     },
