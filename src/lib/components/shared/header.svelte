@@ -36,21 +36,18 @@
                     <Sailboat class="h-10 w-10" />
                     Circolo Nautico Cattolica
                 </h1>
-                <p class="text-muted-foreground mt-1">
-                    Dashboard Gestione Soci
-                </p>
             </div>
             <div class="flex gap-4 items-center">
                 <!-- Navigation Links -->
                 <nav class="flex gap-1 mr-4">
                     <button
-                        onclick={() => navigate("/")}
+                        onclick={() => navigate("/members")}
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors {currentPath ===
-                        '/'
+                        '/members'
                             ? 'bg-primary text-primary-foreground'
                             : 'text-muted-foreground hover:text-foreground hover:bg-accent'}"
                     >
-                        Home
+                        Soci
                     </button>
                     <button
                         onclick={() => navigate("/services")}

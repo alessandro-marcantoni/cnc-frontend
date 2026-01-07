@@ -6,10 +6,9 @@ export type Member = {
   firstName: string;
   lastName: string;
   birthDate: DateValue;
-  email: string;
-  addresses: Address[];
-  phoneNumbers: PhoneNumber[];
-  membership: Membership;
+  membershipNumber: number;
+  membershipStatus: MembershipStatus;
+  paid: boolean;
 };
 
 export type Address = {
@@ -33,8 +32,4 @@ export type Membership = {
   payment: Payment | null;
 };
 
-export type MembershipStatus =
-  | "ACTIVE"
-  | "UNPAID"
-  | "EXCLUSION_DELIBERATED"
-  | "EXCLUDED";
+export type MembershipStatus = "ACTIVE" | "INACTIVE";

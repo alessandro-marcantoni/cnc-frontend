@@ -7,11 +7,10 @@
 
     const stats = $derived({
         total: members.length,
-        active: members.filter((m) => m.membership.status === "ACTIVE").length,
-        unpaid: members.filter((m) => m.membership.status === "UNPAID").length,
-        exclusionDeliberated: members.filter(
-            (m) => m.membership.status === "EXCLUSION_DELIBERATED",
-        ).length,
+        active: members.filter((m) => m.membershipStatus === "ACTIVE").length,
+        inactive: members.filter((m) => m.membershipStatus === "INACTIVE")
+            .length,
+        unpaid: members.filter((m) => !m.paid).length,
     });
 </script>
 
@@ -51,7 +50,7 @@
             class="flex flex-row items-center justify-between space-y-0 pb-2"
         >
             <Card.Title class="text-sm font-medium">Non Paganti</Card.Title>
-            <UserX class="h-4 w-4 text-red-600" />
+            <Clock class="h-4 w-4 text-yellow-600" />
         </Card.Header>
         <Card.Content>
             <div class="text-2xl font-bold">{stats.unpaid}</div>
@@ -67,18 +66,14 @@
         <Card.Header
             class="flex flex-row items-center justify-between space-y-0 pb-2"
         >
-            <Card.Title class="text-sm font-medium"
-                >Esclusione Deliberata</Card.Title
-            >
-            <Clock class="h-4 w-4 text-yellow-600" />
+            <Card.Title class="text-sm font-medium">Inattivi</Card.Title>
+            <UserX class="h-4 w-4 text-red-600" />
         </Card.Header>
         <Card.Content>
-            <div class="text-2xl font-bold">{stats.exclusionDeliberated}</div>
+            <div class="text-2xl font-bold">{stats.inactive}</div>
             <p class="text-xs text-muted-foreground mt-1">
                 <span class="text-yellow-600"
-                    >{Math.round(
-                        (stats.exclusionDeliberated / stats.total) * 100,
-                    )}%</span
+                    >{Math.round((stats.inactive / stats.total) * 100)}%</span
                 > del totale
             </p>
         </Card.Content>

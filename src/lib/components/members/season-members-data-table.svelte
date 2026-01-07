@@ -5,31 +5,19 @@
     import { Input } from "$lib/components/ui/input";
     import MultiSelect from "$lib/components/ui/multi-select.svelte";
     import { ChevronUp, ChevronDown } from "@lucide/svelte";
-    import type { Member, MembershipStatus } from "$model/members/member";
+    import type { Member } from "$model/members/member";
     import { getLocalTimeZone, type DateValue } from "@internationalized/date";
     import { goto } from "@mateothegreat/svelte5-router";
 
-    const statusOptions: {
-        value: MembershipStatus;
+    type PaymentStatus = "PAID" | "UNPAID";
+
+    const paymentStatusOptions: {
+        value: PaymentStatus;
         label: string;
         variant: BadgeVariant;
     }[] = [
-        { value: "ACTIVE", label: "Attivo", variant: "default" },
-        {
-            value: "UNPAID",
-            label: "Non pagato",
-            variant: "secondary",
-        },
-        {
-            value: "EXCLUSION_DELIBERATED",
-            label: "Da escludere",
-            variant: "destructive",
-        },
-        {
-            value: "EXCLUDED",
-            label: "Escluso",
-            variant: "outline",
-        },
+        { value: "PAID", label: "Pagato", variant: "default" },
+        { value: "UNPAID", label: "Non Pagato", variant: "destructive" },
     ];
 
     // Props
@@ -41,11 +29,7 @@
 
     // State
     let searchQuery = $state("");
-    let statusFilter = $state<MembershipStatus[]>([
-        "ACTIVE",
-        "UNPAID",
-        "EXCLUSION_DELIBERATED",
-    ]);
+    let paymentFilter = $state<PaymentStatus[]>(["PAID", "UNPAID"]);
     let sortColumn = $state<string | null>(null);
     let sortDirection = $state<"asc" | "desc">("asc");
     let currentPage = $state(0);
@@ -66,6 +50,11 @@
         }
     }
 
+    // Get payment status from member
+    function getPaymentStatus(member: Member): PaymentStatus {
+        return member.paid ? "PAID" : "UNPAID";
+    }
+
     // Filter members
     const filteredMembers = $derived.by(() => {
         let filtered = data;
@@ -80,9 +69,9 @@
             });
         }
 
-        // Filter by status
+        // Filter by payment status
         filtered = filtered.filter((member) =>
-            statusFilter.includes(member.membership.status),
+            paymentFilter.includes(getPaymentStatus(member)),
         );
 
         // Sort
@@ -93,44 +82,20 @@
 
                 switch (sortColumn) {
                     case "memberNumber":
-                        aVal = a.membership.number;
-                        bVal = b.membership.number;
+                        aVal = a.membershipNumber;
+                        bVal = b.membershipNumber;
                         break;
                     case "name":
-                        aVal = `${a.firstName} ${a.lastName}`;
-                        bVal = `${b.firstName} ${b.lastName}`;
+                        aVal = `${a.lastName} ${a.firstName}`;
+                        bVal = `${b.lastName} ${b.firstName}`;
                         break;
                     case "birthDate":
                         aVal = a.birthDate.toDate(getLocalTimeZone()).getTime();
                         bVal = b.birthDate.toDate(getLocalTimeZone()).getTime();
                         break;
-                    case "location":
-                        aVal = a.addresses[0]
-                            ? `${a.addresses[0].city}, ${a.addresses[0].country}`
-                            : "";
-                        bVal = b.addresses[0]
-                            ? `${b.addresses[0].city}, ${b.addresses[0].country}`
-                            : "";
-                        break;
-                    case "status":
-                        aVal = a.membership.status;
-                        bVal = b.membership.status;
-                        break;
-                    case "joinedDate":
-                        aVal = a.membership.validFrom
-                            .toDate(getLocalTimeZone())
-                            .getTime();
-                        bVal = b.membership.validFrom
-                            .toDate(getLocalTimeZone())
-                            .getTime();
-                        break;
-                    case "expiresAt":
-                        aVal = a.membership.expiresAt
-                            .toDate(getLocalTimeZone())
-                            .getTime();
-                        bVal = b.membership.expiresAt
-                            .toDate(getLocalTimeZone())
-                            .getTime();
+                    case "paymentStatus":
+                        aVal = getPaymentStatus(a);
+                        bVal = getPaymentStatus(b);
                         break;
                     default:
                         return 0;
@@ -171,17 +136,17 @@
         return sortColumn === column && sortDirection === "desc";
     }
 
-    function getStatusBadgeVariant(status: MembershipStatus): BadgeVariant {
+    function getPaymentBadgeVariant(status: PaymentStatus): BadgeVariant {
         return (
-            statusOptions.find((option) => option.value === status)?.variant ||
-            "outline"
+            paymentStatusOptions.find((option) => option.value === status)
+                ?.variant || "outline"
         );
     }
 
-    function getStatusLabel(status: MembershipStatus): string {
+    function getPaymentLabel(status: PaymentStatus): string {
         return (
-            statusOptions.find((option) => option.value === status)?.label ||
-            "Unknown"
+            paymentStatusOptions.find((option) => option.value === status)
+                ?.label || "Unknown"
         );
     }
 
@@ -201,10 +166,10 @@
         goto(`/members/${memberId}`);
     }
 
-    // Reset to first page when search query or status filter changes
+    // Reset to first page when search query or payment filter changes
     $effect(() => {
         searchQuery;
-        statusFilter;
+        paymentFilter;
         currentPage = 0;
     });
 </script>
@@ -223,14 +188,14 @@
         </div>
         <div class="flex items-center gap-2">
             <label
-                for="status-filter"
+                for="payment-filter"
                 class="text-sm font-medium text-muted-foreground"
             >
-                Stato:
+                Pagamento:
             </label>
             <MultiSelect
-                options={statusOptions}
-                bind:selected={statusFilter}
+                options={paymentStatusOptions}
+                bind:selected={paymentFilter}
                 placeholder="Seleziona stato..."
                 class="w-70"
             />
@@ -284,51 +249,12 @@
                     <Table.Head>
                         <button
                             class="flex items-center gap-1 font-medium hover:text-foreground"
-                            onclick={() => handleSort("location")}
+                            onclick={() => handleSort("paymentStatus")}
                         >
-                            Località
-                            {#if isSortedAsc("location")}
+                            Pagamento Tessera
+                            {#if isSortedAsc("paymentStatus")}
                                 <ChevronUp class="h-4 w-4" />
-                            {:else if isSortedDesc("location")}
-                                <ChevronDown class="h-4 w-4" />
-                            {/if}
-                        </button>
-                    </Table.Head>
-                    <Table.Head>
-                        <button
-                            class="flex items-center gap-1 font-medium hover:text-foreground"
-                            onclick={() => handleSort("status")}
-                        >
-                            Stato
-                            {#if isSortedAsc("status")}
-                                <ChevronUp class="h-4 w-4" />
-                            {:else if isSortedDesc("status")}
-                                <ChevronDown class="h-4 w-4" />
-                            {/if}
-                        </button>
-                    </Table.Head>
-                    <Table.Head>
-                        <button
-                            class="flex items-center gap-1 font-medium hover:text-foreground"
-                            onclick={() => handleSort("joinedDate")}
-                        >
-                            Socio dal
-                            {#if isSortedAsc("joinedDate")}
-                                <ChevronUp class="h-4 w-4" />
-                            {:else if isSortedDesc("joinedDate")}
-                                <ChevronDown class="h-4 w-4" />
-                            {/if}
-                        </button>
-                    </Table.Head>
-                    <Table.Head>
-                        <button
-                            class="flex items-center gap-1 font-medium hover:text-foreground"
-                            onclick={() => handleSort("expiresAt")}
-                        >
-                            Scadenza
-                            {#if isSortedAsc("expiresAt")}
-                                <ChevronUp class="h-4 w-4" />
-                            {:else if isSortedDesc("expiresAt")}
+                            {:else if isSortedDesc("paymentStatus")}
                                 <ChevronDown class="h-4 w-4" />
                             {/if}
                         </button>
@@ -343,7 +269,7 @@
                             onclick={() => navigateToMember(member.id)}
                         >
                             <Table.Cell class="font-medium">
-                                {member.membership.number}
+                                {member.membershipNumber}
                             </Table.Cell>
                             <Table.Cell class="font-semibold">
                                 {member.firstName}
@@ -352,34 +278,20 @@
                             <Table.Cell>
                                 {formatDate(member.birthDate)}
                             </Table.Cell>
-                            <Table.Cell class="text-muted-foreground">
-                                {#if member.addresses[0]}
-                                    {member.addresses[0].city}, {member
-                                        .addresses[0].country}
-                                {:else}
-                                    -
-                                {/if}
-                            </Table.Cell>
                             <Table.Cell>
                                 <Badge
-                                    variant={getStatusBadgeVariant(
-                                        member.membership.status,
+                                    variant={getPaymentBadgeVariant(
+                                        getPaymentStatus(member),
                                     )}
                                 >
-                                    {getStatusLabel(member.membership.status)}
+                                    {getPaymentLabel(getPaymentStatus(member))}
                                 </Badge>
-                            </Table.Cell>
-                            <Table.Cell>
-                                {formatDate(member.membership.validFrom)}
-                            </Table.Cell>
-                            <Table.Cell>
-                                {formatDate(member.membership.expiresAt)}
                             </Table.Cell>
                         </Table.Row>
                     {/each}
                 {:else}
                     <Table.Row>
-                        <Table.Cell colspan={8} class="h-24 text-center">
+                        <Table.Cell colspan={4} class="h-24 text-center">
                             Nessun socio trovato con i filtri selezionati.
                         </Table.Cell>
                     </Table.Row>
