@@ -4,14 +4,27 @@
     import { Badge, type BadgeVariant } from "$lib/components/ui/badge";
     import { Input } from "$lib/components/ui/input";
     import MultiSelect from "$lib/components/ui/multi-select.svelte";
+    import * as Dialog from "$lib/components/ui/dialog";
+    import * as Popover from "$lib/components/ui/popover";
+    import * as Command from "$lib/components/ui/command";
+    import * as InputGroup from "$lib/components/ui/input-group";
     import {
         ChevronUp,
         ChevronDown,
         CircleCheck,
         CircleX,
         Calendar,
+        ChevronsUpDown,
+        Check,
     } from "@lucide/svelte";
     import type { FacilityWithStatus } from "$model/facilities/facility-with-status";
+    import type { Member } from "$model/members/member";
+    import {
+        members,
+        loadMembers,
+    } from "$lib/data/repositories/members-repository";
+    import { getCurrentSeason } from "$lib/data/repositories/seasons-repository";
+    import { onMount } from "svelte";
 
     type FacilityStatus = "AVAILABLE" | "RENTED";
 
@@ -39,7 +52,32 @@
     let currentPage = $state(0);
     let pageSize = 50;
 
-    // Format date
+    // Dialog state
+    let isDialogOpen = $state(false);
+    let selectedFacility = $state<FacilityWithStatus | null>(null);
+    let selectedMemberId = $state<string>("");
+    let isWholeSeason = $state(true);
+    let bookingStartDate = $state("");
+    let bookingEndDate = $state("");
+    let bookingPrice = $state("");
+
+    // Combobox state
+    let comboboxOpen = $state(false);
+
+    // Load members on mount
+    onMount(() => {
+        loadMembers();
+    });
+
+    // Helper function to format date for input[type="date"]
+    function formatDateForInput(date: Date): string {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    }
+
+    // Format date for display
     function formatDate(dateString?: string): string {
         if (!dateString) return "-";
         const date = new Date(dateString);
@@ -146,10 +184,79 @@
 
     // Reset to first page when search query or status filter changes
     $effect(() => {
-        searchQuery;
-        statusFilter;
+        const _ = searchQuery;
+        const __ = statusFilter;
         currentPage = 0;
     });
+
+    function openBookingDialog(facility: FacilityWithStatus) {
+        selectedFacility = facility;
+        selectedMemberId = "";
+        comboboxOpen = false;
+        isWholeSeason = true;
+
+        // Set default dates
+        const today = new Date();
+        const currentSeason = getCurrentSeason();
+
+        bookingStartDate = formatDateForInput(today);
+        bookingEndDate = currentSeason
+            ? formatDateForInput(currentSeason.endsAt)
+            : "";
+
+        // Set default price from facility
+        bookingPrice = facility.suggestedPrice.toString();
+
+        isDialogOpen = true;
+    }
+
+    // Update dates when season toggle changes
+    $effect(() => {
+        if (isDialogOpen && selectedFacility) {
+            if (isWholeSeason) {
+                const currentSeason = getCurrentSeason();
+                if (currentSeason) {
+                    bookingStartDate = formatDateForInput(
+                        currentSeason.startsAt,
+                    );
+                    bookingEndDate = formatDateForInput(currentSeason.endsAt);
+                }
+            } else {
+                const today = new Date();
+                const currentSeason = getCurrentSeason();
+                bookingStartDate = formatDateForInput(today);
+                bookingEndDate = currentSeason
+                    ? formatDateForInput(currentSeason.endsAt)
+                    : "";
+            }
+        }
+    });
+
+    function handleBookingSubmit() {
+        if (!selectedFacility || !selectedMemberId) return;
+
+        // TODO: Implement booking logic here
+        console.log("Booking facility:", {
+            facilityId: selectedFacility.id,
+            identifier: selectedFacility.identifier,
+            memberId: selectedMemberId,
+            isWholeSeason,
+            startDate: bookingStartDate,
+            endDate: bookingEndDate,
+            price: parseFloat(bookingPrice),
+        });
+
+        // Close dialog
+        isDialogOpen = false;
+    }
+
+    // Computed list of member options for the select
+    const memberOptions = $derived(
+        $members.map((member: Member) => ({
+            value: member.id.toString(),
+            label: `${member.firstName} ${member.lastName} (${member.membershipNumber})`,
+        })),
+    );
 </script>
 
 <div class="space-y-4">
@@ -224,6 +331,7 @@
                             {/if}
                         </button>
                     </Table.Head>
+                    <Table.Head class="text-right">Azioni</Table.Head>
                 </Table.Row>
             </Table.Header>
             <Table.Body>
@@ -260,11 +368,22 @@
                                     <span class="text-muted-foreground">-</span>
                                 {/if}
                             </Table.Cell>
+                            <Table.Cell class="text-right">
+                                {#if !facility.isRented}
+                                    <Button
+                                        class="h-6"
+                                        onclick={() =>
+                                            openBookingDialog(facility)}
+                                    >
+                                        Affitta
+                                    </Button>
+                                {/if}
+                            </Table.Cell>
                         </Table.Row>
                     {/each}
                 {:else}
                     <Table.Row>
-                        <Table.Cell colspan={3} class="h-24 text-center">
+                        <Table.Cell colspan={4} class="h-24 text-center">
                             Nessuna struttura trovata con i filtri selezionati.
                         </Table.Cell>
                     </Table.Row>
@@ -306,3 +425,169 @@
         </div>
     </div>
 </div>
+
+<!-- Booking Dialog -->
+<Dialog.Root bind:open={isDialogOpen}>
+    <Dialog.Content class="sm:max-w-[500px]">
+        <Dialog.Header>
+            <Dialog.Title>Affitta Struttura</Dialog.Title>
+            <Dialog.Description>
+                Inserisci i dettagli per affittare la struttura {selectedFacility?.identifier}
+            </Dialog.Description>
+        </Dialog.Header>
+
+        <div class="grid gap-4 py-4">
+            <!-- Member Selection -->
+            <div class="grid gap-2">
+                <label class="text-sm font-medium">
+                    Socio <span class="text-destructive">*</span>
+                </label>
+                <Popover.Root bind:open={comboboxOpen}>
+                    <Popover.Trigger>
+                        <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={comboboxOpen}
+                            class="w-full justify-between"
+                        >
+                            {memberOptions.find(
+                                (option) => option.value === selectedMemberId,
+                            )?.label || "Seleziona socio..."}
+                            <ChevronsUpDown
+                                class="ml-2 h-4 w-4 shrink-0 opacity-50"
+                            />
+                        </Button>
+                    </Popover.Trigger>
+                    <Popover.Content class="w-full p-0">
+                        <Command.Root>
+                            <Command.Input placeholder="Cerca socio..." />
+                            <Command.Empty>Nessun socio trovato.</Command.Empty>
+                            <Command.List>
+                                <Command.Group>
+                                    {#each memberOptions as option (option.value)}
+                                        <Command.Item
+                                            value={option.label}
+                                            onSelect={() => {
+                                                selectedMemberId = option.value;
+                                                comboboxOpen = false;
+                                            }}
+                                        >
+                                            <Check
+                                                class={selectedMemberId ===
+                                                option.value
+                                                    ? "mr-2 h-4 w-4 opacity-100"
+                                                    : "mr-2 h-4 w-4 opacity-0"}
+                                            />
+                                            {option.label}
+                                        </Command.Item>
+                                    {/each}
+                                </Command.Group>
+                            </Command.List>
+                        </Command.Root>
+                    </Popover.Content>
+                </Popover.Root>
+            </div>
+
+            <!-- Season Toggle -->
+            <div class="grid gap-2">
+                <label class="text-sm font-medium">Periodo</label>
+                <div class="flex gap-2">
+                    <Button
+                        variant={isWholeSeason ? "default" : "outline"}
+                        size="sm"
+                        class="flex-1"
+                        onclick={() => (isWholeSeason = true)}
+                        type="button"
+                    >
+                        Intera Stagione
+                    </Button>
+                    <Button
+                        variant={!isWholeSeason ? "default" : "outline"}
+                        size="sm"
+                        class="flex-1"
+                        onclick={() => (isWholeSeason = false)}
+                        type="button"
+                    >
+                        Date Personalizzate
+                    </Button>
+                </div>
+            </div>
+
+            <!-- Date Inputs -->
+            <div class="grid grid-cols-2 gap-4">
+                <!-- Start Date -->
+                <div class="grid gap-2">
+                    <label for="start-date" class="text-sm font-medium">
+                        Data Inizio <span class="text-destructive">*</span>
+                    </label>
+                    <Input
+                        id="start-date"
+                        type="date"
+                        bind:value={bookingStartDate}
+                        disabled={isWholeSeason}
+                        required
+                    />
+                </div>
+
+                <!-- End Date -->
+                <div class="grid gap-2">
+                    <label for="end-date" class="text-sm font-medium">
+                        Data Fine <span class="text-destructive">*</span>
+                    </label>
+                    <Input
+                        id="end-date"
+                        type="date"
+                        bind:value={bookingEndDate}
+                        disabled={isWholeSeason}
+                        required
+                    />
+                </div>
+            </div>
+
+            <!-- Price Input -->
+            <div class="grid gap-2">
+                <label for="price" class="text-sm font-medium">
+                    Prezzo<span class="text-destructive">*</span>
+                </label>
+                <InputGroup.Root>
+                    <InputGroup.Addon>
+                        <InputGroup.Text>€</InputGroup.Text>
+                    </InputGroup.Addon>
+                    <InputGroup.Input
+                        id="price"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        bind:value={bookingPrice}
+                        placeholder="0.00"
+                    />
+                    <InputGroup.Addon align="inline-end">
+                        <InputGroup.Text>EUR</InputGroup.Text>
+                    </InputGroup.Addon>
+                </InputGroup.Root>
+                {#if selectedFacility}
+                    <p class="text-xs text-muted-foreground">
+                        Prezzo suggerito: €{selectedFacility.suggestedPrice.toFixed(
+                            2,
+                        )}
+                    </p>
+                {/if}
+            </div>
+        </div>
+
+        <Dialog.Footer>
+            <Button variant="outline" onclick={() => (isDialogOpen = false)}>
+                Annulla
+            </Button>
+            <Button
+                onclick={handleBookingSubmit}
+                disabled={!selectedMemberId ||
+                    !bookingStartDate ||
+                    !bookingEndDate ||
+                    !bookingPrice}
+            >
+                Conferma Affitto
+            </Button>
+        </Dialog.Footer>
+    </Dialog.Content>
+</Dialog.Root>
