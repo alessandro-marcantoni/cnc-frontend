@@ -7,8 +7,16 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 /**
  * Fetch member detail by ID from the API
  */
-export async function fetchMemberDetail(memberId: number): Promise<MemberDetail> {
-  const response = await fetch(`${API_BASE_URL}/api/v1.0/members/${memberId}`);
+export async function fetchMemberDetail(
+  memberId: number,
+  season?: string,
+): Promise<MemberDetail> {
+  const url = new URL(`${API_BASE_URL}/api/v1.0/members/${memberId}`);
+  if (season) {
+    url.searchParams.set("season", season);
+  }
+
+  const response = await fetch(url.toString());
 
   if (!response.ok) {
     if (response.status === 404) {
@@ -33,9 +41,10 @@ export async function fetchMemberDetail(memberId: number): Promise<MemberDetail>
       street: address.street,
       number: address.streetNumber,
     })),
-    phoneNumbers: data.phoneNumbers?.map((phone: any) => ({
-      number: phone.number,
-    })) || [],
+    phoneNumbers:
+      data.phoneNumbers?.map((phone: any) => ({
+        number: phone.number,
+      })) || [],
     memberships: data.memberships.map((membership: any) => ({
       id: membership.id,
       number: membership.number,

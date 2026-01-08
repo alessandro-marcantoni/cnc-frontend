@@ -2,6 +2,7 @@
     import { onMount } from "svelte";
     import Header from "$lib/components/shared/header.svelte";
     import * as Card from "$lib/components/ui/card";
+    import * as Select from "$lib/components/ui/select";
     import { Button } from "$lib/components/ui/button";
     import { Badge } from "$lib/components/ui/badge";
     import { Separator } from "$lib/components/ui/separator";
@@ -20,7 +21,9 @@
         CircleX,
         Clock,
         Ship,
+        UsersRound,
     } from "@lucide/svelte";
+    import * as Empty from "$lib/components/ui/empty";
     import {
         loadMemberDetail,
         memberDetail,
@@ -33,10 +36,25 @@
         isLoadingRentedFacilities,
         rentedFacilitiesError,
     } from "$lib/data/repositories/rented-facilities-repository";
+    import {
+        getSeasons,
+        getCurrentSeason,
+    } from "$lib/data/repositories/seasons-repository";
+    import type { Season } from "$model/shared/season";
 
     let { route } = $props();
     let memberId = $derived(parseInt(route.result.path.params.id, 10));
     let isValidId = $derived(!isNaN(memberId) && memberId > 0);
+
+    // Get available seasons
+    const seasons = getSeasons();
+    const currentSeason = getCurrentSeason();
+
+    // Selected season state
+    let selectedSeason = $state<Season | null>(currentSeason);
+    let selectedSeasonValue = $state<string>(
+        currentSeason ? currentSeason.name.toString() : "",
+    );
 
     let member = $derived(isValidId ? $memberDetail(memberId) : null);
     let memberLoading = $derived(
@@ -66,9 +84,10 @@
         }
 
         try {
+            const season = selectedSeasonValue || undefined;
             await Promise.all([
-                loadMemberDetail(memberId),
-                loadRentedFacilities(memberId),
+                loadMemberDetail(memberId, false, season),
+                loadRentedFacilities(memberId, false, season),
             ]);
         } catch (error) {
             console.error("Failed to load data:", error);
@@ -81,14 +100,35 @@
         }
 
         try {
+            const season = selectedSeasonValue || undefined;
             await Promise.all([
-                loadMemberDetail(memberId, true),
-                loadRentedFacilities(memberId, true),
+                loadMemberDetail(memberId, true, season),
+                loadRentedFacilities(memberId, true, season),
             ]);
         } catch (error) {
             console.error("Failed to refresh data:", error);
         }
     }
+
+    // Watch for season changes and reload data
+    $effect(() => {
+        if (!isValidId) return;
+
+        if (selectedSeasonValue) {
+            const season = seasons.find(
+                (s) => s.name.toString() === selectedSeasonValue,
+            );
+            if (season) {
+                selectedSeason = season;
+                Promise.all([
+                    loadMemberDetail(memberId, true, selectedSeasonValue),
+                    loadRentedFacilities(memberId, true, selectedSeasonValue),
+                ]).catch((error) => {
+                    console.error("Failed to load data for season:", error);
+                });
+            }
+        }
+    });
 
     function goBack() {
         window.history.pushState({}, "", "/");
@@ -207,7 +247,7 @@
             <p class="text-muted-foreground">Caricamento dettagli socio...</p>
         </div>
     {:else if member}
-        <!-- Header with Member Name and Refresh Button -->
+        <!-- Header with Member Name, Season Selector, and Refresh Button -->
         <div class="flex items-center justify-between mb-8">
             <div>
                 <h1 class="text-4xl font-bold tracking-tight">
@@ -215,19 +255,62 @@
                     {member.lastName}
                 </h1>
             </div>
-            <Button
-                variant="outline"
-                size="sm"
-                onclick={handleRefresh}
-                disabled={loading}
-            >
-                <RefreshCw
-                    class={loading
-                        ? "h-4 w-4 mr-2 animate-spin"
-                        : "h-4 w-4 mr-2"}
-                />
-                Aggiorna
-            </Button>
+            <div class="flex gap-2 items-center">
+                <!-- Season Selector -->
+                <div class="flex items-center gap-2">
+                    <Calendar class="h-4 w-4 text-muted-foreground" />
+                    <Select.Root type="single" bind:value={selectedSeasonValue}>
+                        <Select.Trigger class="w-40">
+                            {#if selectedSeasonValue}
+                                Stagione {selectedSeasonValue}
+                            {:else}
+                                Seleziona stagione
+                            {/if}
+                        </Select.Trigger>
+                        <Select.Content>
+                            <Select.Group>
+                                <Select.Label>Stagioni Disponibili</Select.Label
+                                >
+                                {#each seasons as season (season.name)}
+                                    <Select.Item value={season.name.toString()}>
+                                        Stagione {season.name}
+                                    </Select.Item>
+                                {/each}
+                            </Select.Group>
+                        </Select.Content>
+                    </Select.Root>
+                    {#if selectedSeason}
+                        <span class="text-xs text-muted-foreground">
+                            ({new Date(
+                                selectedSeason.startsAt,
+                            ).toLocaleDateString("it-IT", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                            })} - {new Date(
+                                selectedSeason.endsAt,
+                            ).toLocaleDateString("it-IT", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                            })})
+                        </span>
+                    {/if}
+                </div>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onclick={handleRefresh}
+                    disabled={loading}
+                >
+                    <RefreshCw
+                        class={loading
+                            ? "h-4 w-4 mr-2 animate-spin"
+                            : "h-4 w-4 mr-2"}
+                    />
+                    Aggiorna
+                </Button>
+            </div>
         </div>
 
         <div class="grid gap-6 lg:grid-cols-3">
@@ -337,7 +420,9 @@
                     {@const currentMembership = member.memberships[0]}
                     <Card.Root>
                         <Card.Header>
-                            <Card.Title>Tessera Corrente</Card.Title>
+                            <Card.Title class="flex items-center gap-2"
+                                ><CreditCard />Tessera Corrente</Card.Title
+                            >
                         </Card.Header>
                         <Card.Content class="space-y-4">
                             <div class="flex items-center justify-between mb-4">
@@ -400,12 +485,36 @@
                                         <p
                                             class="text-xs text-muted-foreground mt-1"
                                         >
-                                            Pagato il {currentMembership.payment
-                                                .paidAt}
+                                            Pagato il {formatDate(
+                                                new Date(
+                                                    currentMembership.payment
+                                                        .paidAt,
+                                                ),
+                                            )}
                                         </p>
                                     {/if}
                                 </div>
                             {/if}
+                        </Card.Content>
+                    </Card.Root>
+                {:else}
+                    <Card.Root>
+                        <Card.Content class="p-6">
+                            <Empty.Root>
+                                <Empty.Header>
+                                    <Empty.Media variant="icon">
+                                        <UsersRound class="h-6 w-6" />
+                                    </Empty.Media>
+                                    <Empty.Title
+                                        >Nessuna Tessera Trovata</Empty.Title
+                                    >
+                                    <Empty.Description>
+                                        Questa persona non era socia nella
+                                        stagione {selectedSeasonValue ||
+                                            currentSeason.name}.
+                                    </Empty.Description>
+                                </Empty.Header>
+                            </Empty.Root>
                         </Card.Content>
                     </Card.Root>
                 {/if}
@@ -700,7 +809,9 @@
                                                 class="flex items-center gap-2 text-sm text-muted-foreground py-2"
                                             >
                                                 <Clock class="h-4 w-4" />
-                                                <span>Pagamento in sospeso</span
+                                                <span
+                                                    >Pagamento non ancora
+                                                    effettuato</span
                                                 >
                                             </div>
                                         {/if}

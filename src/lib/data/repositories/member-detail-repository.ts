@@ -48,7 +48,10 @@ export const memberDetail = derived(
 /**
  * Fetches member detail from API or mock data
  */
-async function fetchMemberDetailData(memberId: number): Promise<MemberDetail> {
+async function fetchMemberDetailData(
+  memberId: number,
+  season?: string,
+): Promise<MemberDetail> {
   if (USE_MOCK_DATA) {
     const memberDetail = mockMemberDetails[memberId];
     if (!memberDetail) {
@@ -57,7 +60,7 @@ async function fetchMemberDetailData(memberId: number): Promise<MemberDetail> {
     return memberDetail;
   }
 
-  return fetchMemberDetail(memberId);
+  return fetchMemberDetail(memberId, season);
 }
 
 /**
@@ -72,10 +75,12 @@ function isCacheValid(entry: CacheEntry | undefined): boolean {
  * Loads member detail with caching
  * @param memberId - The ID of the member to load
  * @param forceRefresh - If true, bypass cache and fetch fresh data
+ * @param season - Optional season to filter member data
  */
 export async function loadMemberDetail(
   memberId: number,
   forceRefresh = false,
+  season?: string,
 ): Promise<MemberDetail> {
   const state = get(memberDetailStore);
 
@@ -122,7 +127,7 @@ export async function loadMemberDetail(
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
-    const memberDetail = await fetchMemberDetailData(memberId);
+    const memberDetail = await fetchMemberDetailData(memberId, season);
 
     // Update cache
     memberDetailStore.update((state) => {

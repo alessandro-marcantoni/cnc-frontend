@@ -49,16 +49,19 @@ export const rentedFacilities = derived(
  */
 async function fetchRentedFacilitiesData(
   memberId: number,
+  season?: string,
 ): Promise<RentedFacility[]> {
   if (USE_MOCK_DATA) {
-    console.info("Using mock data for rented facilities (no API URL configured)");
+    console.info(
+      "Using mock data for rented facilities (no API URL configured)",
+    );
     // Simulate network delay in development
     await new Promise((resolve) => setTimeout(resolve, 500));
     // Return empty array for mock data (or add mock data if needed)
     return [];
   }
 
-  return fetchRentedFacilities(memberId);
+  return fetchRentedFacilities(memberId, season);
 }
 
 /**
@@ -73,10 +76,12 @@ function isCacheValid(entry: CacheEntry | undefined): boolean {
  * Loads rented facilities for a member with caching
  * @param memberId - The ID of the member
  * @param forceRefresh - If true, bypass cache and fetch fresh data
+ * @param season - Optional season to filter facilities
  */
 export async function loadRentedFacilities(
   memberId: number,
   forceRefresh = false,
+  season?: string,
 ): Promise<RentedFacility[]> {
   const state = get(rentedFacilitiesStore);
 
@@ -118,7 +123,7 @@ export async function loadRentedFacilities(
   }));
 
   try {
-    const facilities = await fetchRentedFacilitiesData(memberId);
+    const facilities = await fetchRentedFacilitiesData(memberId, season);
 
     // Update cache
     rentedFacilitiesStore.update((state) => {
