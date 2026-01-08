@@ -428,7 +428,7 @@
 
 <!-- Booking Dialog -->
 <Dialog.Root bind:open={isDialogOpen}>
-    <Dialog.Content class="sm:max-w-[500px]">
+    <Dialog.Content class="sm:max-w-125">
         <Dialog.Header>
             <Dialog.Title>Affitta Struttura</Dialog.Title>
             <Dialog.Description>

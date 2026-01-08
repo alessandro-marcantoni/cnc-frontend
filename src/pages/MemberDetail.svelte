@@ -3,9 +3,14 @@
     import Header from "$lib/components/shared/header.svelte";
     import * as Card from "$lib/components/ui/card";
     import * as Select from "$lib/components/ui/select";
+    import * as Dialog from "$lib/components/ui/dialog";
+    import * as Popover from "$lib/components/ui/popover";
+    import * as Command from "$lib/components/ui/command";
+    import * as InputGroup from "$lib/components/ui/input-group";
     import { Button } from "$lib/components/ui/button";
     import { Badge } from "$lib/components/ui/badge";
     import { Separator } from "$lib/components/ui/separator";
+    import { Input } from "$lib/components/ui/input";
     import {
         RefreshCw,
         CircleAlert,
@@ -22,6 +27,9 @@
         Clock,
         Ship,
         UsersRound,
+        Plus,
+        ChevronsUpDown,
+        Check,
     } from "@lucide/svelte";
     import * as Empty from "$lib/components/ui/empty";
     import {
@@ -40,7 +48,17 @@
         getSeasons,
         getCurrentSeason,
     } from "$lib/data/repositories/seasons-repository";
+    import {
+        loadFacilitiesCatalog,
+        facilitiesCatalog,
+    } from "$lib/data/repositories/facilities-catalog-repository";
+    import {
+        loadFacilitiesByType,
+        facilitiesByType,
+    } from "$lib/data/repositories/facilities-by-type-repository";
     import type { Season } from "$model/shared/season";
+    import type { FacilityType } from "$model/facilities/facility-type";
+    import type { FacilityWithStatus } from "$model/facilities/facility-with-status";
 
     let { route } = $props();
     let memberId = $derived(parseInt(route.result.path.params.id, 10));
@@ -75,6 +93,36 @@
     // Combined loading and error states
     let loading = $derived(memberLoading || facilitiesLoading);
     let error = $derived(memberError || facilitiesError);
+
+    // Rent facility dialog state
+    let isRentDialogOpen = $state(false);
+    let selectedFacilityType = $state<number | null>(null);
+    let selectedFacilityId = $state<number | null>(null);
+    let isWholeSeason = $state(true);
+    let bookingStartDate = $state("");
+    let bookingEndDate = $state("");
+    let bookingPrice = $state("");
+    let facilityTypeComboboxOpen = $state(false);
+
+    // Load facility catalog on mount
+    onMount(() => {
+        loadFacilitiesCatalog();
+    });
+
+    // Load facilities when type is selected
+    $effect(() => {
+        if (selectedFacilityType) {
+            loadFacilitiesByType(selectedFacilityType);
+        }
+    });
+
+    // Helper function to format date for input[type="date"]
+    function formatDateForInput(date: Date): string {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    }
 
     // Load member detail and facilities on mount
     onMount(async () => {
@@ -191,6 +239,107 @@
     function isFacilityActive(expiresAt: Date): boolean {
         return new Date(expiresAt) > new Date();
     }
+
+    // Rent facility dialog functions
+    function openRentDialog() {
+        selectedFacilityType = null;
+        selectedFacilityId = null;
+        facilityTypeComboboxOpen = false;
+        isWholeSeason = true;
+
+        // Set default dates
+        const today = new Date();
+        const currentSeasonData = currentSeason;
+
+        bookingStartDate = formatDateForInput(today);
+        bookingEndDate = currentSeasonData
+            ? formatDateForInput(currentSeasonData.endsAt)
+            : "";
+
+        // Reset price
+        bookingPrice = "";
+
+        isRentDialogOpen = true;
+    }
+
+    // Update dates when season toggle changes
+    $effect(() => {
+        if (isRentDialogOpen) {
+            if (isWholeSeason) {
+                const currentSeasonData = currentSeason;
+                if (currentSeasonData) {
+                    bookingStartDate = formatDateForInput(
+                        currentSeasonData.startsAt,
+                    );
+                    bookingEndDate = formatDateForInput(
+                        currentSeasonData.endsAt,
+                    );
+                }
+            } else {
+                const today = new Date();
+                const currentSeasonData = currentSeason;
+                bookingStartDate = formatDateForInput(today);
+                bookingEndDate = currentSeasonData
+                    ? formatDateForInput(currentSeasonData.endsAt)
+                    : "";
+            }
+        }
+    });
+
+    // Update price when facility is selected
+    $effect(() => {
+        if (selectedFacilityId && $facilitiesByType.length > 0) {
+            const facility = $facilitiesByType.find(
+                (f) => f.id === selectedFacilityId,
+            );
+            if (facility) {
+                bookingPrice = facility.suggestedPrice.toString();
+            }
+        }
+    });
+
+    function handleRentSubmit() {
+        if (!selectedFacilityId || !memberId) return;
+
+        // TODO: Implement booking logic here
+        console.log("Booking facility:", {
+            facilityId: selectedFacilityId,
+            memberId: memberId,
+            isWholeSeason,
+            startDate: bookingStartDate,
+            endDate: bookingEndDate,
+            price: parseFloat(bookingPrice),
+        });
+
+        // Close dialog
+        isRentDialogOpen = false;
+    }
+
+    // Computed values for dialog
+    const facilityTypeOptions = $derived(
+        $facilitiesCatalog.map((type: FacilityType) => ({
+            value: type.id,
+            label: type.name,
+            description: type.description,
+        })),
+    );
+
+    const availableFacilitiesForType = $derived(
+        $facilitiesByType.filter((f) => !f.isRented),
+    );
+
+    const selectedFacility = $derived(
+        selectedFacilityId
+            ? $facilitiesByType.find((f) => f.id === selectedFacilityId)
+            : null,
+    );
+
+    const selectedFacilityTypeName = $derived(
+        selectedFacilityType
+            ? $facilitiesCatalog.find((t) => t.id === selectedFacilityType)
+                  ?.name
+            : null,
+    );
 
     function getStatusLabel(status: string): string {
         switch (status.toUpperCase()) {
@@ -530,19 +679,25 @@
                                 <Card.Title class="flex items-center gap-2">
                                     <Anchor class="h-5 w-5" />
                                     Servizi Affittati
+                                    {#if facilities && facilities.length > 0}
+                                        <Badge variant="secondary">
+                                            {facilities.length}
+                                            {facilities.length === 1
+                                                ? "servizio"
+                                                : "servizi"}
+                                        </Badge>
+                                    {/if}
                                 </Card.Title>
                                 <Card.Description>
-                                    Elenco dei servizi attualmente in uso
+                                    Elenco dei servizi attualmente affittati
                                 </Card.Description>
                             </div>
-                            {#if facilities && facilities.length > 0}
-                                <Badge variant="secondary">
-                                    {facilities.length}
-                                    {facilities.length === 1
-                                        ? "servizio"
-                                        : "servizi"}
-                                </Badge>
-                            {/if}
+                            <div class="flex items-center gap-2">
+                                <Button size="sm" onclick={openRentDialog}>
+                                    <Plus class="h-4 w-4 mr-2" />
+                                    Affitta Servizio
+                                </Button>
+                            </div>
                         </div>
                     </Card.Header>
                     <Card.Content>
@@ -887,3 +1042,230 @@
         </div>
     {/if}
 </main>
+
+<!-- Rent Facility Dialog -->
+<Dialog.Root bind:open={isRentDialogOpen}>
+    <Dialog.Content class="sm:max-w-125">
+        <Dialog.Header>
+            <Dialog.Title>Affitta Servizio</Dialog.Title>
+            <Dialog.Description>
+                Seleziona il servizio da affittare per {member?.firstName}
+                {member?.lastName}
+            </Dialog.Description>
+        </Dialog.Header>
+
+        <div class="grid gap-4 py-4">
+            <!-- Facility Type Selection -->
+            <div class="grid gap-2">
+                <label class="text-sm font-medium">
+                    Tipo di Servizio <span class="text-destructive">*</span>
+                </label>
+                <Popover.Root bind:open={facilityTypeComboboxOpen}>
+                    <Popover.Trigger>
+                        <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={facilityTypeComboboxOpen}
+                            class="w-full justify-between"
+                        >
+                            {selectedFacilityTypeName ||
+                                "Seleziona tipo di servizio..."}
+                            <ChevronsUpDown
+                                class="ml-2 h-4 w-4 shrink-0 opacity-50"
+                            />
+                        </Button>
+                    </Popover.Trigger>
+                    <Popover.Content class="w-full p-0">
+                        <Command.Root>
+                            <Command.Input
+                                placeholder="Cerca tipo di servizio..."
+                            />
+                            <Command.Empty>Nessun tipo trovato.</Command.Empty>
+                            <Command.List>
+                                <Command.Group>
+                                    {#each facilityTypeOptions as option (option.value)}
+                                        <Command.Item
+                                            value={option.label}
+                                            onSelect={() => {
+                                                selectedFacilityType =
+                                                    option.value;
+                                                selectedFacilityId = null;
+                                                facilityTypeComboboxOpen = false;
+                                            }}
+                                        >
+                                            <Check
+                                                class={selectedFacilityType ===
+                                                option.value
+                                                    ? "mr-2 h-4 w-4 opacity-100"
+                                                    : "mr-2 h-4 w-4 opacity-0"}
+                                            />
+                                            <div>
+                                                <div>{option.label}</div>
+                                                <div
+                                                    class="text-xs text-muted-foreground"
+                                                >
+                                                    {option.description}
+                                                </div>
+                                            </div>
+                                        </Command.Item>
+                                    {/each}
+                                </Command.Group>
+                            </Command.List>
+                        </Command.Root>
+                    </Popover.Content>
+                </Popover.Root>
+            </div>
+
+            <!-- Specific Facility Selection -->
+            {#if selectedFacilityType}
+                <div class="grid gap-2">
+                    <label class="text-sm font-medium">
+                        Servizio Specifico <span class="text-destructive"
+                            >*</span
+                        >
+                    </label>
+                    <Select.Root
+                        type="single"
+                        onValueChange={(value) => {
+                            selectedFacilityId = value ? parseInt(value) : null;
+                        }}
+                    >
+                        <Select.Trigger class="w-full">
+                            {#if selectedFacilityId}
+                                {availableFacilitiesForType.find(
+                                    (f) => f.id === selectedFacilityId,
+                                )?.identifier || "Seleziona servizio..."}
+                            {:else}
+                                Seleziona servizio...
+                            {/if}
+                        </Select.Trigger>
+                        <Select.Content>
+                            <Select.Group>
+                                <Select.Label>Servizi Disponibili</Select.Label>
+                                {#if availableFacilitiesForType.length > 0}
+                                    {#each availableFacilitiesForType as facility (facility.id)}
+                                        <Select.Item
+                                            value={facility.id.toString()}
+                                        >
+                                            {facility.identifier} - €{facility.suggestedPrice.toFixed(
+                                                2,
+                                            )}
+                                        </Select.Item>
+                                    {/each}
+                                {:else}
+                                    <Select.Item value="" disabled>
+                                        Nessuna servizio disponibile
+                                    </Select.Item>
+                                {/if}
+                            </Select.Group>
+                        </Select.Content>
+                    </Select.Root>
+                </div>
+            {/if}
+
+            <!-- Season Toggle -->
+            <div class="grid gap-2">
+                <label class="text-sm font-medium">Periodo</label>
+                <div class="flex gap-2">
+                    <Button
+                        variant={isWholeSeason ? "default" : "outline"}
+                        size="sm"
+                        class="flex-1"
+                        onclick={() => (isWholeSeason = true)}
+                        type="button"
+                    >
+                        Intera Stagione
+                    </Button>
+                    <Button
+                        variant={!isWholeSeason ? "default" : "outline"}
+                        size="sm"
+                        class="flex-1"
+                        onclick={() => (isWholeSeason = false)}
+                        type="button"
+                    >
+                        Date Personalizzate
+                    </Button>
+                </div>
+            </div>
+
+            <!-- Date Inputs -->
+            <div class="grid grid-cols-2 gap-4">
+                <!-- Start Date -->
+                <div class="grid gap-2">
+                    <label for="start-date" class="text-sm font-medium">
+                        Data Inizio <span class="text-destructive">*</span>
+                    </label>
+                    <Input
+                        id="start-date"
+                        type="date"
+                        bind:value={bookingStartDate}
+                        disabled={isWholeSeason}
+                        required
+                    />
+                </div>
+
+                <!-- End Date -->
+                <div class="grid gap-2">
+                    <label for="end-date" class="text-sm font-medium">
+                        Data Fine <span class="text-destructive">*</span>
+                    </label>
+                    <Input
+                        id="end-date"
+                        type="date"
+                        bind:value={bookingEndDate}
+                        disabled={isWholeSeason}
+                        required
+                    />
+                </div>
+            </div>
+
+            <!-- Price Input -->
+            <div class="grid gap-2">
+                <label for="price" class="text-sm font-medium">
+                    Prezzo<span class="text-destructive">*</span>
+                </label>
+                <InputGroup.Root>
+                    <InputGroup.Addon>
+                        <InputGroup.Text>€</InputGroup.Text>
+                    </InputGroup.Addon>
+                    <InputGroup.Input
+                        id="price"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        bind:value={bookingPrice}
+                        placeholder="0.00"
+                    />
+                    <InputGroup.Addon align="inline-end">
+                        <InputGroup.Text>EUR</InputGroup.Text>
+                    </InputGroup.Addon>
+                </InputGroup.Root>
+                {#if selectedFacility}
+                    <p class="text-xs text-muted-foreground">
+                        Prezzo suggerito: €{selectedFacility.suggestedPrice.toFixed(
+                            2,
+                        )}
+                    </p>
+                {/if}
+            </div>
+        </div>
+
+        <Dialog.Footer>
+            <Button
+                variant="outline"
+                onclick={() => (isRentDialogOpen = false)}
+            >
+                Annulla
+            </Button>
+            <Button
+                onclick={handleRentSubmit}
+                disabled={!selectedFacilityId ||
+                    !bookingStartDate ||
+                    !bookingEndDate ||
+                    !bookingPrice}
+            >
+                Conferma Affitto
+            </Button>
+        </Dialog.Footer>
+    </Dialog.Content>
+</Dialog.Root>
