@@ -30,7 +30,10 @@
         Plus,
         ChevronsUpDown,
         Check,
+        Pencil,
+        Trash2,
     } from "@lucide/svelte";
+    import * as AlertDialog from "$lib/components/ui/alert-dialog";
     import * as Empty from "$lib/components/ui/empty";
     import {
         loadMemberDetail,
@@ -103,6 +106,15 @@
     let bookingEndDate = $state("");
     let bookingPrice = $state("");
     let facilityTypeComboboxOpen = $state(false);
+
+    // Modify/Free facility dialog state
+    let isPaymentDialogOpen = $state(false);
+    let isFreeDialogOpen = $state(false);
+    let selectedRentedFacility = $state<any>(null);
+    let paymentAmount = $state("");
+    let paymentMethod = $state("");
+    let paymentTransactionRef = $state("");
+    let paymentDate = $state("");
 
     // Load facility catalog on mount
     onMount(() => {
@@ -354,6 +366,60 @@
             default:
                 return status;
         }
+    }
+
+    // Modify/Free facility functions
+    function openPaymentDialog(facility: any) {
+        selectedRentedFacility = facility;
+
+        // Pre-fill with existing payment data if available
+        if (facility.payment) {
+            paymentAmount = facility.payment.amount.toString();
+            paymentMethod = facility.payment.paymentMethod || "";
+            paymentTransactionRef = facility.payment.transactionRef || "";
+            paymentDate = facility.payment.paidAt
+                ? formatDateForInput(new Date(facility.payment.paidAt))
+                : formatDateForInput(new Date());
+        } else {
+            paymentAmount = "";
+            paymentMethod = "";
+            paymentTransactionRef = "";
+            paymentDate = formatDateForInput(new Date());
+        }
+
+        isPaymentDialogOpen = true;
+    }
+
+    function openFreeDialog(facility: any) {
+        selectedRentedFacility = facility;
+        isFreeDialogOpen = true;
+    }
+
+    function handlePaymentSubmit() {
+        if (!selectedRentedFacility || !paymentAmount) return;
+
+        // TODO: Implement payment update logic here
+        console.log("Update payment:", {
+            rentalId: selectedRentedFacility.id,
+            amount: parseFloat(paymentAmount),
+            method: paymentMethod,
+            transactionRef: paymentTransactionRef,
+            paidAt: paymentDate,
+        });
+
+        isPaymentDialogOpen = false;
+    }
+
+    function handleFreeFacility() {
+        if (!selectedRentedFacility) return;
+
+        // TODO: Implement free facility logic here
+        console.log("Free facility:", {
+            rentalId: selectedRentedFacility.id,
+            facilityId: selectedRentedFacility.facilityId,
+        });
+
+        isFreeDialogOpen = false;
     }
 </script>
 
@@ -734,7 +800,7 @@
                                     >
                                         <!-- Facility Header -->
                                         <div
-                                            class="flex items-start justify-between gap-4"
+                                            class="flex items-start justify-between gap-4 mb-4"
                                         >
                                             <div class="flex-1">
                                                 <div
@@ -743,40 +809,66 @@
                                                     <h4
                                                         class="font-semibold text-lg"
                                                     >
+                                                        {facility.facilityName} -
                                                         {facility.facilityIdentifier}
+                                                        {#if isActive}
+                                                            <Badge
+                                                                variant="default"
+                                                                class="ml-2"
+                                                            >
+                                                                <CircleCheck
+                                                                    class="h-3 w-3 mr-1"
+                                                                />
+                                                                Attivo
+                                                            </Badge>
+                                                        {:else}
+                                                            <Badge
+                                                                variant="secondary"
+                                                                class="ml-2"
+                                                            >
+                                                                <CircleX
+                                                                    class="h-3 w-3 mr-1"
+                                                                />
+                                                                Scaduto
+                                                            </Badge>
+                                                        {/if}
                                                     </h4>
-                                                    {#if isActive}
-                                                        <Badge
-                                                            variant="default"
-                                                            class="ml-2"
-                                                        >
-                                                            <CircleCheck
-                                                                class="h-3 w-3 mr-1"
-                                                            />
-                                                            Attivo
-                                                        </Badge>
-                                                    {:else}
-                                                        <Badge
-                                                            variant="secondary"
-                                                            class="ml-2"
-                                                        >
-                                                            <CircleX
-                                                                class="h-3 w-3 mr-1"
-                                                            />
-                                                            Scaduto
-                                                        </Badge>
-                                                    {/if}
                                                 </div>
-                                                <p
-                                                    class="text-sm text-muted-foreground mb-1"
-                                                >
-                                                    {facility.facilityName}
-                                                </p>
                                                 <p
                                                     class="text-sm text-muted-foreground"
                                                 >
                                                     {facility.facilityTypeDescription}
                                                 </p>
+                                            </div>
+                                            <div class="flex gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onclick={() =>
+                                                        openPaymentDialog(
+                                                            facility,
+                                                        )}
+                                                >
+                                                    <Pencil
+                                                        class="h-4 w-4 mr-2"
+                                                    />
+                                                    {facility.payment
+                                                        ? "Modifica"
+                                                        : "Pagamento"}
+                                                </Button>
+                                                <Button
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    onclick={() =>
+                                                        openFreeDialog(
+                                                            facility,
+                                                        )}
+                                                >
+                                                    <Trash2
+                                                        class="h-4 w-4 mr-2"
+                                                    />
+                                                    Libera
+                                                </Button>
                                             </div>
                                         </div>
 
@@ -1269,3 +1361,137 @@
         </Dialog.Footer>
     </Dialog.Content>
 </Dialog.Root>
+
+<!-- Payment Dialog -->
+<Dialog.Root bind:open={isPaymentDialogOpen}>
+    <Dialog.Content class="sm:max-w-125">
+        <Dialog.Header>
+            <Dialog.Title>
+                {selectedRentedFacility?.payment
+                    ? "Modifica Pagamento"
+                    : "Aggiungi Pagamento"}
+            </Dialog.Title>
+            <Dialog.Description>
+                Inserisci i dettagli del pagamento per {selectedRentedFacility?.facilityIdentifier}
+            </Dialog.Description>
+        </Dialog.Header>
+
+        <div class="grid gap-4 py-4">
+            <!-- Amount -->
+            <div class="grid gap-2">
+                <label for="payment-amount" class="text-sm font-medium">
+                    Importo <span class="text-destructive">*</span>
+                </label>
+                <InputGroup.Root>
+                    <InputGroup.Addon>
+                        <InputGroup.Text>€</InputGroup.Text>
+                    </InputGroup.Addon>
+                    <InputGroup.Input
+                        id="payment-amount"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        bind:value={paymentAmount}
+                        placeholder="0.00"
+                    />
+                    <InputGroup.Addon align="inline-end">
+                        <InputGroup.Text>EUR</InputGroup.Text>
+                    </InputGroup.Addon>
+                </InputGroup.Root>
+            </div>
+
+            <!-- Payment Date -->
+            <div class="grid gap-2">
+                <label for="payment-date" class="text-sm font-medium">
+                    Data Pagamento <span class="text-destructive">*</span>
+                </label>
+                <Input
+                    id="payment-date"
+                    type="date"
+                    bind:value={paymentDate}
+                    required
+                />
+            </div>
+
+            <!-- Payment Method -->
+            <div class="grid gap-2">
+                <label for="payment-method" class="text-sm font-medium">
+                    Metodo di Pagamento
+                </label>
+                <Select.Root
+                    type="single"
+                    onValueChange={(value) => {
+                        paymentMethod = value || "";
+                    }}
+                    value={paymentMethod}
+                >
+                    <Select.Trigger class="w-full">
+                        {#if paymentMethod}
+                            {paymentMethod}
+                        {:else}
+                            Seleziona metodo...
+                        {/if}
+                    </Select.Trigger>
+                    <Select.Content>
+                        <Select.Group>
+                            <Select.Label>Metodo</Select.Label>
+                            <Select.Item value="Contanti">Contanti</Select.Item>
+                            <Select.Item value="Carta">Carta</Select.Item>
+                            <Select.Item value="Bonifico">Bonifico</Select.Item>
+                            <Select.Item value="Assegno">Assegno</Select.Item>
+                            <Select.Item value="Altro">Altro</Select.Item>
+                        </Select.Group>
+                    </Select.Content>
+                </Select.Root>
+            </div>
+
+            <!-- Transaction Reference -->
+            <div class="grid gap-2">
+                <label for="transaction-ref" class="text-sm font-medium">
+                    Riferimento Transazione
+                </label>
+                <Input
+                    id="transaction-ref"
+                    type="text"
+                    bind:value={paymentTransactionRef}
+                    placeholder="es. TRX-12345"
+                />
+            </div>
+        </div>
+
+        <Dialog.Footer>
+            <Button
+                variant="outline"
+                onclick={() => (isPaymentDialogOpen = false)}
+            >
+                Annulla
+            </Button>
+            <Button
+                onclick={handlePaymentSubmit}
+                disabled={!paymentAmount || !paymentDate}
+            >
+                Salva Pagamento
+            </Button>
+        </Dialog.Footer>
+    </Dialog.Content>
+</Dialog.Root>
+
+<!-- Free Facility Alert Dialog -->
+<AlertDialog.Root bind:open={isFreeDialogOpen}>
+    <AlertDialog.Content>
+        <AlertDialog.Header>
+            <AlertDialog.Title>Conferma Liberazione</AlertDialog.Title>
+            <AlertDialog.Description>
+                Sei sicuro di voler liberare la struttura {selectedRentedFacility?.facilityIdentifier}?
+                Questa azione rimuoverà l'affitto corrente e renderà la
+                struttura nuovamente disponibile.
+            </AlertDialog.Description>
+        </AlertDialog.Header>
+        <AlertDialog.Footer>
+            <AlertDialog.Cancel>Annulla</AlertDialog.Cancel>
+            <AlertDialog.Action onclick={handleFreeFacility}>
+                Conferma Liberazione
+            </AlertDialog.Action>
+        </AlertDialog.Footer>
+    </AlertDialog.Content>
+</AlertDialog.Root>
