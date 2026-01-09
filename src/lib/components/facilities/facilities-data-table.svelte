@@ -4,6 +4,7 @@
     import { Badge, type BadgeVariant } from "$lib/components/ui/badge";
     import { Input } from "$lib/components/ui/input";
     import MultiSelect from "$lib/components/ui/multi-select.svelte";
+    import DatePicker from "$lib/components/ui/date-picker.svelte";
     import * as Dialog from "$lib/components/ui/dialog";
     import * as Popover from "$lib/components/ui/popover";
     import * as Command from "$lib/components/ui/command";
@@ -25,6 +26,13 @@
     } from "$lib/data/repositories/members-repository";
     import { getCurrentSeason } from "$lib/data/repositories/seasons-repository";
     import { onMount } from "svelte";
+    import { formatDate } from "$model/shared/date-utils";
+    import {
+        CalendarDate,
+        getLocalTimeZone,
+        toCalendarDate,
+        today,
+    } from "@internationalized/date";
 
     type FacilityStatus = "AVAILABLE" | "RENTED";
 
@@ -57,8 +65,8 @@
     let selectedFacility = $state<FacilityWithStatus | null>(null);
     let selectedMemberId = $state<string>("");
     let isWholeSeason = $state(true);
-    let bookingStartDate = $state("");
-    let bookingEndDate = $state("");
+    let bookingStartDate: CalendarDate | undefined = $state(undefined);
+    let bookingEndDate: CalendarDate | undefined = $state(undefined);
     let bookingPrice = $state("");
 
     // Combobox state
@@ -75,17 +83,6 @@
         const month = String(date.getMonth() + 1).padStart(2, "0");
         const day = String(date.getDate()).padStart(2, "0");
         return `${year}-${month}-${day}`;
-    }
-
-    // Format date for display
-    function formatDate(dateString?: string): string {
-        if (!dateString) return "-";
-        const date = new Date(dateString);
-        return date.toLocaleDateString("it-IT", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-        });
     }
 
     // Get facility status
@@ -196,13 +193,12 @@
         isWholeSeason = true;
 
         // Set default dates
-        const today = new Date();
         const currentSeason = getCurrentSeason();
 
-        bookingStartDate = formatDateForInput(today);
+        bookingStartDate = today(getLocalTimeZone());
         bookingEndDate = currentSeason
-            ? formatDateForInput(currentSeason.endsAt)
-            : "";
+            ? toCalendarDate(currentSeason.endsAt)
+            : undefined;
 
         // Set default price from facility
         bookingPrice = facility.suggestedPrice.toString();
@@ -216,18 +212,15 @@
             if (isWholeSeason) {
                 const currentSeason = getCurrentSeason();
                 if (currentSeason) {
-                    bookingStartDate = formatDateForInput(
-                        currentSeason.startsAt,
-                    );
-                    bookingEndDate = formatDateForInput(currentSeason.endsAt);
+                    bookingStartDate = toCalendarDate(currentSeason.startsAt);
+                    bookingEndDate = toCalendarDate(currentSeason.endsAt);
                 }
             } else {
-                const today = new Date();
                 const currentSeason = getCurrentSeason();
-                bookingStartDate = formatDateForInput(today);
+                bookingStartDate = today(getLocalTimeZone());
                 bookingEndDate = currentSeason
-                    ? formatDateForInput(currentSeason.endsAt)
-                    : "";
+                    ? toCalendarDate(currentSeason.endsAt)
+                    : undefined;
             }
         }
     });
@@ -439,11 +432,11 @@
         <div class="grid gap-4 py-4">
             <!-- Member Selection -->
             <div class="grid gap-2">
-                <label class="text-sm font-medium">
+                <label class="text-sm font-medium" for="member-select">
                     Socio <span class="text-destructive">*</span>
                 </label>
                 <Popover.Root bind:open={comboboxOpen}>
-                    <Popover.Trigger>
+                    <Popover.Trigger id="member-select">
                         <Button
                             variant="outline"
                             role="combobox"
@@ -490,7 +483,9 @@
 
             <!-- Season Toggle -->
             <div class="grid gap-2">
-                <label class="text-sm font-medium">Periodo</label>
+                <label class="text-sm font-medium" for="season-toggle"
+                    >Periodo</label
+                >
                 <div class="flex gap-2">
                     <Button
                         variant={isWholeSeason ? "default" : "outline"}
@@ -517,29 +512,27 @@
             <div class="grid grid-cols-2 gap-4">
                 <!-- Start Date -->
                 <div class="grid gap-2">
-                    <label for="start-date" class="text-sm font-medium">
+                    <label class="text-sm font-medium" for="start-date">
                         Data Inizio <span class="text-destructive">*</span>
                     </label>
-                    <Input
+                    <DatePicker
                         id="start-date"
-                        type="date"
                         bind:value={bookingStartDate}
                         disabled={isWholeSeason}
-                        required
+                        placeholder="Seleziona data inizio"
                     />
                 </div>
 
                 <!-- End Date -->
                 <div class="grid gap-2">
-                    <label for="end-date" class="text-sm font-medium">
+                    <label class="text-sm font-medium" for="end-date">
                         Data Fine <span class="text-destructive">*</span>
                     </label>
-                    <Input
+                    <DatePicker
                         id="end-date"
-                        type="date"
                         bind:value={bookingEndDate}
                         disabled={isWholeSeason}
-                        required
+                        placeholder="Seleziona data fine"
                     />
                 </div>
             </div>

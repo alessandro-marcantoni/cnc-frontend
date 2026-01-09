@@ -1,12 +1,13 @@
 import type { Season } from "$model/shared/season";
+import { CalendarDate, getLocalTimeZone, today } from "@internationalized/date";
 
 const seasons: Season[] = [];
 const currentYear = new Date().getFullYear();
 for (let year = 2024; year <= currentYear; year++) {
   seasons.push({
     name: year,
-    startsAt: new Date(year, 3, 1), // April 1st (month is 0-indexed)
-    endsAt: new Date(year + 1, 2, 31), // March 31st of next year
+    startsAt: new CalendarDate(year, 4, 1), // April 1st
+    endsAt: new CalendarDate(year + 1, 3, 31), // March 31st of next year
   });
 }
 
@@ -21,7 +22,7 @@ export function getSeasons(): Season[] {
  * Get the current season based on today's date
  */
 export function getCurrentSeason(): Season {
-  const now = new Date();
+  const now = today(getLocalTimeZone());
   return (
     seasons.find((season) => now >= season.startsAt && now <= season.endsAt) ||
     seasons[seasons.length - 1] ||

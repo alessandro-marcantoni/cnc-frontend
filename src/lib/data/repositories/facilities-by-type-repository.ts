@@ -34,32 +34,6 @@ const facilitiesByTypeState = writable<FacilitiesByTypeState>(initialState);
 async function fetchFacilitiesByTypeData(
   facilityTypeId: number,
 ): Promise<FacilityWithStatus[]> {
-  // Use mock data in development if no API URL is configured
-  if (USE_MOCK_DATA) {
-    console.info("Using mock data (no API URL configured)");
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // Generate mock facilities based on type ID
-    const mockFacilities: FacilityWithStatus[] = [];
-    for (let i = 1; i <= 10; i++) {
-      mockFacilities.push({
-        id: facilityTypeId * 100 + i,
-        facilityTypeId: facilityTypeId,
-        identifier: `FACILITY-${facilityTypeId}-${i}`,
-        facilityTypeName: `Type ${facilityTypeId}`,
-        facilityTypeDescription: `Description for type ${facilityTypeId}`,
-        suggestedPrice: 100.0 + facilityTypeId * 10,
-        isRented: i % 3 === 0,
-        expiresAt:
-          i % 3 === 0
-            ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-            : undefined,
-      });
-    }
-    return mockFacilities;
-  }
-
   return fetchFacilitiesByType(facilityTypeId);
 }
 

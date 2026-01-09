@@ -1,5 +1,7 @@
+import type { DateValue } from "@internationalized/date";
+
 export type Season = {
   name: number;
-  startsAt: Date;
-  endsAt: Date;
+  startsAt: DateValue;
+  endsAt: DateValue;
 };

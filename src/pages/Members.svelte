@@ -19,10 +19,10 @@
         getCurrentSeason,
     } from "$lib/data/repositories/seasons-repository";
     import type { Season } from "$model/shared/season";
+    import { formatDate } from "$model/shared/date-utils";
 
     // Get available seasons
     const seasons = getSeasons();
-    const currentSeason = getCurrentSeason();
 
     // Selected season state - default to empty string for "all seasons"
     let selectedSeason = $state<Season | null>(null);
@@ -171,19 +171,9 @@
                     </Select.Root>
                     {#if selectedSeason}
                         <span class="text-xs text-muted-foreground">
-                            ({new Date(
-                                selectedSeason.startsAt,
-                            ).toLocaleDateString("it-IT", {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                            })} - {new Date(
+                            ({formatDate(selectedSeason.startsAt)} - {formatDate(
                                 selectedSeason.endsAt,
-                            ).toLocaleDateString("it-IT", {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                            })})
+                            )})
                         </span>
                     {/if}
                 </div>

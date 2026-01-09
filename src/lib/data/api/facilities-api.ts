@@ -1,6 +1,11 @@
 import type { RentedFacility } from "$model/facilities/rented-facility";
 import type { FacilityType } from "$model/facilities/facility-type";
 import type { FacilityWithStatus } from "$model/facilities/facility-with-status";
+import {
+  getLocalTimeZone,
+  parseAbsolute,
+  parseDate,
+} from "@internationalized/date";
 
 // Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
@@ -93,8 +98,8 @@ export async function fetchRentedFacilities(
     facilityIdentifier: facility.facilityIdentifier,
     facilityName: facility.facilityName,
     facilityTypeDescription: facility.facilityTypeDescription,
-    rentedAt: new Date(facility.rentedAt),
-    expiresAt: new Date(facility.expiresAt),
+    rentedAt: parseAbsolute(facility.rentedAt, getLocalTimeZone()),
+    expiresAt: parseDate(facility.expiresAt),
     payment: facility.payment
       ? {
           amount: facility.payment.amount,

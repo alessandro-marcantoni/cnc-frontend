@@ -1,4 +1,5 @@
 import type { Payment } from "$model/payments/payment";
+import type { DateValue } from "@internationalized/date";
 
 export type BoatInfo = {
   name: string;
@@ -12,8 +13,8 @@ export type RentedFacility = {
   facilityIdentifier: string;
   facilityName: string;
   facilityTypeDescription: string;
-  rentedAt: Date;
-  expiresAt: Date;
+  rentedAt: DateValue;
+  expiresAt: DateValue;
   payment: Payment | null;
   boatInfo: BoatInfo | null;
 };
