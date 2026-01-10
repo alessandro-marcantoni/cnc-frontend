@@ -3,6 +3,7 @@
     import MembersStats from "$lib/components/members/members-stats.svelte";
     import AllMembersDataTable from "$lib/components/members/all-members-data-table.svelte";
     import SeasonMembersDataTable from "$lib/components/members/season-members-data-table.svelte";
+    import AddMemberDialog from "$lib/components/members/add-member-dialog.svelte";
     import Header from "$lib/components/shared/header.svelte";
     import * as Card from "$lib/components/ui/card";
     import * as Select from "$lib/components/ui/select";
@@ -20,6 +21,9 @@
     } from "$lib/data/repositories/seasons-repository";
     import type { Season } from "$model/shared/season";
     import { formatDate } from "$model/shared/date-utils";
+
+    // Dialog state
+    let addMemberDialogOpen = $state(false);
 
     // Get available seasons
     const seasons = getSeasons();
@@ -120,7 +124,7 @@
                         </Card.Description>
                     </div>
                     <div class="flex gap-2">
-                        <Button>
+                        <Button onclick={() => (addMemberDialogOpen = true)}>
                             <UserPlus class="h-4 w-4 mr-2" />
                             Aggiungi Socio
                         </Button>
@@ -187,3 +191,6 @@
         </Card.Root>
     {/if}
 </main>
+
+<!-- Add Member Dialog -->
+<AddMemberDialog bind:open={addMemberDialogOpen} />
