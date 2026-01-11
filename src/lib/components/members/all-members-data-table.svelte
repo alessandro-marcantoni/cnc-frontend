@@ -15,11 +15,9 @@
         variant: BadgeVariant;
     }[] = [
         { value: "ACTIVE", label: "Attivo", variant: "default" },
-        {
-            value: "INACTIVE",
-            label: "Inattivo",
-            variant: "secondary",
-        },
+        { value: "EXPIRED", label: "Scaduto", variant: "secondary" },
+        { value: "SUSPENDED", label: "Sospeso", variant: "outline" },
+        { value: "EXCLUDED", label: "Escluso", variant: "destructive" },
     ];
 
     // Props
@@ -31,7 +29,7 @@
 
     // State
     let searchQuery = $state("");
-    let statusFilter = $state<MembershipStatus[]>(["ACTIVE", "INACTIVE"]);
+    let statusFilter = $state<MembershipStatus[]>(["ACTIVE", "EXPIRED"]);
     let sortColumn = $state<string | null>(null);
     let sortDirection = $state<"asc" | "desc">("asc");
     let currentPage = $state(0);

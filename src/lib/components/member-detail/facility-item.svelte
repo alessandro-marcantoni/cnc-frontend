@@ -10,6 +10,7 @@
         Clock,
         Pencil,
         Trash2,
+        CirclePlus,
     } from "@lucide/svelte";
     import type { RentedFacility } from "$model/facilities/rented-facility";
     import { formatDate } from "$model/shared/date-utils";
@@ -23,9 +24,10 @@
         facility: RentedFacility;
         onEditPayment: (facility: RentedFacility) => void;
         onFree: (facility: RentedFacility) => void;
+        onRenew: (facility: RentedFacility) => void;
     }
 
-    let { facility, onEditPayment, onFree }: Props = $props();
+    let { facility, onEditPayment, onFree, onRenew }: Props = $props();
 
     function formatCurrency(amount: number, currency: string): string {
         return new Intl.NumberFormat("it-IT", {
@@ -66,6 +68,14 @@
             </p>
         </div>
         <div class="flex gap-2">
+            <Button
+                variant="outline"
+                size="sm"
+                onclick={() => onRenew(facility)}
+            >
+                <CirclePlus class="h-4 w-4 mr-2" />
+                Rinnova
+            </Button>
             <Button
                 variant="outline"
                 size="sm"

@@ -1,51 +1,48 @@
 <script lang="ts">
     import * as Card from "$lib/components/ui/card";
     import * as Empty from "$lib/components/ui/empty";
-    import { Badge } from "$lib/components/ui/badge";
+    import { Badge, type BadgeVariant } from "$lib/components/ui/badge";
+    import { Button } from "$lib/components/ui/button";
     import { Separator } from "$lib/components/ui/separator";
-    import { CreditCard, UsersRound } from "@lucide/svelte";
-    import type { Membership } from "$model/members/member";
+    import { CreditCard, UsersRound, RefreshCw } from "@lucide/svelte";
+    import type { Membership, MembershipStatus } from "$model/members/member";
     import { formatDate } from "$model/shared/date-utils";
 
     interface Props {
         memberships: Membership[] | undefined;
         selectedSeasonName: string;
+        onRenew: () => void;
     }
 
-    let { memberships, selectedSeasonName }: Props = $props();
+    const statusOptions: {
+        value: MembershipStatus;
+        label: string;
+        variant: BadgeVariant;
+    }[] = [
+        { value: "ACTIVE", label: "Attivo", variant: "default" },
+        { value: "EXPIRED", label: "Scaduto", variant: "secondary" },
+        { value: "SUSPENDED", label: "Sospeso", variant: "outline" },
+        { value: "EXCLUDED", label: "Escluso", variant: "destructive" },
+    ];
+
+    let { memberships, selectedSeasonName, onRenew }: Props = $props();
 
     const currentMembership = $derived(
         memberships && memberships.length > 0 ? memberships[0] : null,
     );
 
-    function getStatusBadgeVariant(status: string) {
-        switch (status.toUpperCase()) {
-            case "ACTIVE":
-                return "default";
-            case "UNPAID":
-                return "destructive";
-            case "EXCLUSION_DELIBERATED":
-                return "destructive";
-            case "EXCLUDED":
-                return "secondary";
-            default:
-                return "outline";
-        }
+    function getStatusBadgeVariant(status: MembershipStatus): BadgeVariant {
+        return (
+            statusOptions.find((option) => option.value === status)?.variant ||
+            "outline"
+        );
     }
 
-    function getStatusLabel(status: string): string {
-        switch (status.toUpperCase()) {
-            case "ACTIVE":
-                return "Attivo";
-            case "UNPAID":
-                return "Non Pagato";
-            case "EXCLUSION_DELIBERATED":
-                return "Esclusione Deliberata";
-            case "EXCLUDED":
-                return "Escluso";
-            default:
-                return status;
-        }
+    function getStatusLabel(status: MembershipStatus): string {
+        return (
+            statusOptions.find((option) => option.value === status)?.label ||
+            "Unknown"
+        );
     }
 
     function formatCurrency(amount: number, currency: string): string {
@@ -59,9 +56,15 @@
 {#if currentMembership}
     <Card.Root>
         <Card.Header>
-            <Card.Title class="flex items-center gap-2"
-                ><CreditCard />Tessera Corrente</Card.Title
-            >
+            <div class="flex items-center justify-between">
+                <Card.Title class="flex items-center gap-2"
+                    ><CreditCard />Tessera Corrente</Card.Title
+                >
+                <Button size="sm" variant="outline" onclick={onRenew}>
+                    <RefreshCw class="h-4 w-4 mr-2" />
+                    Rinnova
+                </Button>
+            </div>
         </Card.Header>
         <Card.Content class="space-y-4">
             <div class="flex items-center justify-between mb-4">

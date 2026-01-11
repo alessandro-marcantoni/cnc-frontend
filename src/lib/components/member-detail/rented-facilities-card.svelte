@@ -13,6 +13,7 @@
         onRentClick: () => void;
         onEditPayment: (facility: RentedFacility) => void;
         onFree: (facility: RentedFacility) => void;
+        onRenew: (facility: RentedFacility) => void;
     }
 
     let {
@@ -22,6 +23,7 @@
         onRentClick,
         onEditPayment,
         onFree,
+        onRenew,
     }: Props = $props();
 </script>
 
@@ -81,6 +83,7 @@
                         {facility}
                         onEditPayment={(f) => onEditPayment(f)}
                         onFree={(f) => onFree(f)}
+                        onRenew={(f) => onRenew(f)}
                     />
                 {/each}
             </div>

@@ -18,6 +18,8 @@
     import RentFacilityDialog from "$lib/components/member-detail/rent-facility-dialog.svelte";
     import PaymentDialog from "$lib/components/member-detail/payment-dialog.svelte";
     import FreeFacilityDialog from "$lib/components/member-detail/free-facility-dialog.svelte";
+    import RenewMembershipDialog from "$lib/components/member-detail/renew-membership-dialog.svelte";
+    import RenewFacilityDialog from "$lib/components/member-detail/renew-facility-dialog.svelte";
 
     import {
         loadMemberDetail,
@@ -96,6 +98,20 @@
     let bookingEndDate: CalendarDate | undefined = $state(undefined);
     let bookingPrice = $state("");
     let facilityTypeComboboxOpen = $state(false);
+
+    // Renew membership dialog state
+    let isRenewMembershipDialogOpen = $state(false);
+    let renewMembershipSeason = $state<string | undefined>(undefined);
+    let renewMembershipPrice = $state("");
+
+    // Renew facility dialog state
+    let isRenewFacilityDialogOpen = $state(false);
+    let renewFacilityToRenew = $state<RentedFacility | null>(null);
+    let renewFacilitySeason = $state<string | undefined>(undefined);
+    let renewFacilityIsWholeSeason = $state(true);
+    let renewFacilityStartDate: CalendarDate | undefined = $state(undefined);
+    let renewFacilityEndDate: CalendarDate | undefined = $state(undefined);
+    let renewFacilityPrice = $state("");
 
     // Modify/Free facility dialog state
     let isPaymentDialogOpen = $state(false);
@@ -308,6 +324,89 @@
 
         isFreeDialogOpen = false;
     }
+
+    // Renew membership functions
+    function openRenewMembershipDialog() {
+        renewMembershipSeason = undefined;
+        renewMembershipPrice = "";
+        isRenewMembershipDialogOpen = true;
+    }
+
+    function handleRenewMembershipSubmit() {
+        if (!renewMembershipSeason || !renewMembershipPrice) return;
+
+        // TODO: Implement renew membership logic here
+        console.log("Renew membership:", {
+            memberId: memberId,
+            season: renewMembershipSeason,
+            price: parseFloat(renewMembershipPrice),
+        });
+
+        isRenewMembershipDialogOpen = false;
+    }
+
+    // Renew facility functions
+    function openRenewFacilityDialog(facility: RentedFacility) {
+        renewFacilityToRenew = facility;
+        renewFacilitySeason = undefined;
+        renewFacilityIsWholeSeason = true;
+        renewFacilityPrice = "";
+
+        // Set default dates based on current season
+        const currentSeasonData = currentSeason;
+        if (currentSeasonData) {
+            renewFacilityStartDate = toCalendarDate(currentSeasonData.startsAt);
+            renewFacilityEndDate = toCalendarDate(currentSeasonData.endsAt);
+        }
+
+        isRenewFacilityDialogOpen = true;
+    }
+
+    // Update dates when season toggle changes for renew dialog
+    $effect(() => {
+        if (isRenewFacilityDialogOpen) {
+            if (renewFacilityIsWholeSeason) {
+                const currentSeasonData = currentSeason;
+                if (currentSeasonData) {
+                    renewFacilityStartDate = toCalendarDate(
+                        currentSeasonData.startsAt,
+                    );
+                    renewFacilityEndDate = toCalendarDate(
+                        currentSeasonData.endsAt,
+                    );
+                }
+            } else {
+                const currentSeasonData = currentSeason;
+                renewFacilityStartDate = today(getLocalTimeZone());
+                renewFacilityEndDate = currentSeasonData
+                    ? toCalendarDate(currentSeasonData.endsAt)
+                    : undefined;
+            }
+        }
+    });
+
+    function handleRenewFacilitySubmit() {
+        if (
+            !renewFacilityToRenew ||
+            !renewFacilitySeason ||
+            !renewFacilityStartDate ||
+            !renewFacilityEndDate ||
+            !renewFacilityPrice
+        )
+            return;
+
+        // TODO: Implement renew facility logic here
+        console.log("Renew facility rental:", {
+            facilityId: renewFacilityToRenew.facilityId,
+            memberId: memberId,
+            season: renewFacilitySeason,
+            startDate: renewFacilityStartDate,
+            endDate: renewFacilityEndDate,
+            price: parseFloat(renewFacilityPrice),
+        });
+
+        isRenewFacilityDialogOpen = false;
+    }
 </script>
 
 <Header showAddMember={false} />
@@ -412,6 +511,7 @@
                     memberships={member.memberships}
                     selectedSeasonName={selectedSeasonValue ||
                         currentSeason.name.toString()}
+                    onRenew={openRenewMembershipDialog}
                 />
             </div>
 
@@ -425,6 +525,7 @@
                     onRentClick={openRentDialog}
                     onEditPayment={openPaymentDialog}
                     onFree={openFreeDialog}
+                    onRenew={openRenewFacilityDialog}
                 />
 
                 <!-- Membership History Card -->
@@ -481,4 +582,41 @@
     bind:open={isFreeDialogOpen}
     facility={selectedRentedFacility}
     onConfirm={handleFreeFacility}
+/>
+
+<!-- Renew Membership Dialog -->
+<RenewMembershipDialog
+    bind:open={isRenewMembershipDialogOpen}
+    memberName={member ? `${member.firstName} ${member.lastName}` : ""}
+    {currentSeason}
+    availableSeasons={seasons}
+    bind:selectedSeason={renewMembershipSeason}
+    bind:price={renewMembershipPrice}
+    onClose={() => (isRenewMembershipDialogOpen = false)}
+    onSubmit={handleRenewMembershipSubmit}
+    onSeasonChange={(season) => (renewMembershipSeason = season)}
+    onPriceChange={(price) => (renewMembershipPrice = price)}
+/>
+
+<!-- Renew Facility Dialog -->
+<RenewFacilityDialog
+    bind:open={isRenewFacilityDialogOpen}
+    memberName={member ? `${member.firstName} ${member.lastName}` : ""}
+    facilityName={renewFacilityToRenew?.facilityName || ""}
+    facilityIdentifier={renewFacilityToRenew?.facilityIdentifier || ""}
+    {currentSeason}
+    availableSeasons={seasons}
+    bind:selectedSeason={renewFacilitySeason}
+    bind:isWholeSeason={renewFacilityIsWholeSeason}
+    bind:startDate={renewFacilityStartDate}
+    bind:endDate={renewFacilityEndDate}
+    bind:price={renewFacilityPrice}
+    suggestedPrice={0}
+    onClose={() => (isRenewFacilityDialogOpen = false)}
+    onSubmit={handleRenewFacilitySubmit}
+    onSeasonChange={(season) => (renewFacilitySeason = season)}
+    onSeasonToggle={(wholeSeason) => (renewFacilityIsWholeSeason = wholeSeason)}
+    onStartDateChange={(date) => (renewFacilityStartDate = date)}
+    onEndDateChange={(date) => (renewFacilityEndDate = date)}
+    onPriceChange={(price) => (renewFacilityPrice = price)}
 />

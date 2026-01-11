@@ -32,4 +32,4 @@ export type Membership = {
   payment: Payment | null;
 };
 
-export type MembershipStatus = "ACTIVE" | "INACTIVE";
+export type MembershipStatus = "ACTIVE" | "EXPIRED" | "SUSPENDED" | "EXCLUDED";
