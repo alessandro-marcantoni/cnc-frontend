@@ -27,6 +27,7 @@
         E164Number,
         CountryCode,
     } from "$lib/components/ui/phone-input/types";
+    import { getSeasons } from "$lib/data/repositories/seasons-repository";
 
     type Props = {
         open?: boolean;
@@ -58,11 +59,10 @@
     let membershipPrice = $state(130.0);
 
     // TODO: Replace with actual seasons from API
-    const availableSeasons = [
-        { value: "2024-2025", label: "2024/2025" },
-        { value: "2023-2024", label: "2023/2024" },
-        { value: "2022-2023", label: "2022/2023" },
-    ];
+    const availableSeasons = getSeasons().map((season) => ({
+        value: season.name.toString(),
+        label: season.name.toString(),
+    }));
 
     // Address type
     type Address = {

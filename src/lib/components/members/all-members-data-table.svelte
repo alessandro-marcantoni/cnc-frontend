@@ -8,6 +8,7 @@
     import type { Member, MembershipStatus } from "$model/members/member";
     import { getLocalTimeZone, type DateValue } from "@internationalized/date";
     import { goto } from "@mateothegreat/svelte5-router";
+    import { formatDate } from "$model/shared/date-utils";
 
     const statusOptions: {
         value: MembershipStatus;
@@ -18,6 +19,7 @@
         { value: "EXPIRED", label: "Scaduto", variant: "secondary" },
         { value: "SUSPENDED", label: "Sospeso", variant: "outline" },
         { value: "EXCLUDED", label: "Escluso", variant: "destructive" },
+        { value: "NONE", label: "Nessuna Tessera", variant: "outline" },
     ];
 
     // Props
@@ -34,21 +36,6 @@
     let sortDirection = $state<"asc" | "desc">("asc");
     let currentPage = $state(0);
     let pageSize = 50;
-
-    // Format date as dd/MM/yyyy
-    function formatDate(date: Date | DateValue): string {
-        if (date instanceof Date) {
-            const day = date.getDate().toString().padStart(2, "0");
-            const month = (date.getMonth() + 1).toString().padStart(2, "0");
-            const year = date.getFullYear();
-            return `${day}/${month}/${year}`;
-        } else {
-            const day = date.day.toString().padStart(2, "0");
-            const month = date.month.toString().padStart(2, "0");
-            const year = date.year.toString();
-            return `${day}/${month}/${year}`;
-        }
-    }
 
     // Filter members
     const filteredMembers = $derived.by(() => {
