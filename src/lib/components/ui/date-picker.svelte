@@ -13,7 +13,7 @@
 
     type Props = {
         id: string;
-        value?: CalendarDate | undefined;
+        value?: CalendarDate;
         onValueChange?: (value: CalendarDate | undefined) => void;
         placeholder?: string;
         label?: string;

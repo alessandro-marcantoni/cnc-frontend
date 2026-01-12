@@ -6,11 +6,7 @@
     import DatePicker from "$lib/components/ui/date-picker.svelte";
     import { Input } from "$lib/components/ui/input";
     import type { RentedFacility } from "$model/facilities/rented-facility";
-    import {
-        CalendarDate,
-        toCalendarDate,
-        type DateValue,
-    } from "@internationalized/date";
+    import { CalendarDate } from "@internationalized/date";
 
     interface Props {
         open: boolean;

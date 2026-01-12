@@ -1,5 +1,9 @@
 import type { MemberDetail } from "$model/members/member-detail";
-import { parseDate } from "@internationalized/date";
+import {
+  getLocalTimeZone,
+  parseAbsolute,
+  parseDate,
+} from "@internationalized/date";
 
 // Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
@@ -55,7 +59,10 @@ export async function fetchMemberDetail(
         ? {
             amount: membership.payment.amount,
             currency: membership.payment.currency,
-            paidAt: membership.payment.paidAt,
+            paidAt: parseAbsolute(
+              membership.payment.paidAt,
+              getLocalTimeZone(),
+            ),
             paymentMethod: membership.payment.paymentMethod,
             transactionRef: membership.payment.transactionRef,
           }
