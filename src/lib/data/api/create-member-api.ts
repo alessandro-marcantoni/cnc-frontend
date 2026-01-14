@@ -53,6 +53,7 @@ export interface CreateMemberResponse {
     status: string;
     validFrom: string;
     expiresAt: string;
+    price: number;
     payment: {
       amount: number;
       currency: string;
@@ -120,6 +121,7 @@ export async function createMember(
       status: membership.status as MembershipStatus,
       validFrom: parseDate(membership.validFrom),
       expiresAt: parseDate(membership.expiresAt),
+      price: membership.price,
       payment: membership.payment
         ? {
             amount: membership.payment.amount,

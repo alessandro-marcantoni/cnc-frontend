@@ -100,6 +100,7 @@ export async function fetchRentedFacilities(
     facilityTypeDescription: facility.facilityTypeDescription,
     rentedAt: parseAbsolute(facility.rentedAt, getLocalTimeZone()),
     expiresAt: parseDate(facility.expiresAt),
+    price: facility.price,
     payment: facility.payment
       ? {
           amount: facility.payment.amount,

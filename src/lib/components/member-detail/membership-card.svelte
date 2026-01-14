@@ -15,6 +15,7 @@
         CirclePlus,
         Pencil,
         Plus,
+        Euro,
     } from "@lucide/svelte";
     import type { Membership, MembershipStatus } from "$model/members/member";
     import { formatDate } from "$model/shared/date-utils";
@@ -205,9 +206,27 @@
                         </p>
                     {/if}
                 {:else}
-                    <p class="text-sm text-muted-foreground italic">
+                    <p class="text-sm text-muted-foreground italic mb-2">
                         Nessun pagamento registrato
                     </p>
+                    {#if currentMembership.price}
+                        <div class="mt-3 p-3 border rounded-lg">
+                            <div class="flex items-center gap-2">
+                                <Euro class="h-4 w-4 " />
+                                <div>
+                                    <p class="text-xs font-medium">
+                                        Importo Dovuto
+                                    </p>
+                                    <p class="text-sm font-semibold">
+                                        {formatCurrency(
+                                            currentMembership.price,
+                                            "EUR",
+                                        )}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    {/if}
                 {/if}
             </div>
         </Card.Content>

@@ -11,6 +11,7 @@
         Pencil,
         Trash2,
         CirclePlus,
+        Euro,
     } from "@lucide/svelte";
     import type { RentedFacility } from "$model/facilities/rented-facility";
     import { formatDate } from "$model/shared/date-utils";
@@ -182,9 +183,24 @@
         </div>
     {:else}
         <Separator class="my-4" />
-        <div class="flex items-center gap-2 text-sm text-muted-foreground py-2">
+        <div
+            class="flex items-center gap-2 text-sm text-muted-foreground py-2 mb-2"
+        >
             <Clock class="h-4 w-4" />
             <span>Pagamento non ancora effettuato</span>
         </div>
+        {#if facility.price}
+            <div class="mt-3 p-3 rounded-lg">
+                <div class="flex items-center gap-2">
+                    <Euro class="h-4 w-4" />
+                    <div>
+                        <p class="text-xs font-medium">Importo Dovuto</p>
+                        <p class="text-sm font-semibold">
+                            {formatCurrency(facility.price, "EUR")}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {/if}
     {/if}
 </div>

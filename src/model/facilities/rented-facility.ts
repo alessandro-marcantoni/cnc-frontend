@@ -15,6 +15,7 @@ export type RentedFacility = {
   facilityTypeDescription: string;
   rentedAt: DateValue;
   expiresAt: DateValue;
+  price: number;
   payment: Payment | null;
   boatInfo: BoatInfo | null;
 };

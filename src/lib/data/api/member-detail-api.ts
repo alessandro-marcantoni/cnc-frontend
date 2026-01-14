@@ -55,6 +55,7 @@ export async function fetchMemberDetail(
       status: membership.status,
       validFrom: parseDate(membership.validFrom),
       expiresAt: parseDate(membership.expiresAt),
+      price: membership.price,
       payment: membership.payment
         ? {
             amount: membership.payment.amount,
