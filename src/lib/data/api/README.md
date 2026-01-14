@@ -9,6 +9,7 @@ api/
 ├── index.ts                  # Central export point for all API functions
 ├── members-api.ts            # Members list API calls
 ├── member-detail-api.ts      # Individual member details API calls
+├── create-member-api.ts      # Create new member API calls
 └── facilities-api.ts         # Facilities-related API calls
 ```
 
@@ -62,6 +63,40 @@ try {
 }
 ```
 
+### Example: Creating a Member
+
+```typescript
+import { createMember, type CreateMemberRequest } from "$lib/data/api";
+
+try {
+  const request: CreateMemberRequest = {
+    firstName: "Mario",
+    lastName: "Rossi",
+    birthDate: "1990-01-15",
+    email: "mario.rossi@example.com",
+    phoneNumbers: [{ prefix: "+39", number: "3331234567" }],
+    addresses: [
+      {
+        country: "Italia",
+        city: "Roma",
+        street: "Via Roma",
+        streetNumber: "123",
+        zipCode: "00100",
+      },
+    ],
+    createMembership: true,
+    seasonId: 2024,
+    price: 130.0,
+  };
+
+  const newMember = await createMember(request);
+  // newMember is typed as MemberDetail
+  console.log("Member created:", newMember);
+} catch (error) {
+  console.error("Failed to create member:", error);
+}
+```
+
 ### Example: Fetching Rented Facilities
 
 ```typescript
@@ -92,29 +127,52 @@ VITE_API_URL=http://localhost:8080
 
 ## API Functions
 
-### `fetchMembers()`
+### `fetchMembers(season?: string)`
 
 Fetches all members from the backend.
 
+- **Parameters**:
+  - `season` (optional): Season name to filter members by
 - **Returns**: `Promise<Member[]>`
 - **Endpoint**: `GET /api/v1.0/members`
 - **Transforms**: API response to `Member[]` with date parsing
 
-### `fetchMemberDetail(memberId: number)`
+### `fetchMemberDetail(memberId: number, season?: string)`
 
 Fetches detailed information for a specific member.
 
-- **Parameters**: 
+- **Parameters**:
   - `memberId`: The ID of the member to fetch
+  - `season` (optional): Season name to filter membership data
 - **Returns**: `Promise<MemberDetail>`
 - **Endpoint**: `GET /api/v1.0/members/:memberId`
 - **Transforms**: API response to `MemberDetail` with date parsing and nested objects
+
+### `createMember(request: CreateMemberRequest)`
+
+Creates a new member in the system.
+
+- **Parameters**:
+  - `request`: Object containing member information:
+    - `firstName`: Member's first name
+    - `lastName`: Member's last name
+    - `birthDate`: Birth date in ISO format (YYYY-MM-DD)
+    - `email`: Member's email address
+    - `phoneNumbers`: Array of phone numbers with prefix and number
+    - `addresses`: Array of address objects
+    - `createMembership`: Boolean indicating if a membership should be created
+    - `seasonId` (optional): Season ID if creating membership
+    - `price` (optional): Membership price if creating membership
+- **Returns**: `Promise<MemberDetail>`
+- **Endpoint**: `POST /api/v1.0/members`
+- **Transforms**: API response to `MemberDetail` with date parsing
+- **Error handling**: Throws descriptive errors for validation or server errors
 
 ### `fetchRentedFacilities(memberId: number)`
 
 Fetches all facilities rented by a specific member.
 
-- **Parameters**: 
+- **Parameters**:
   - `memberId`: The ID of the member
 - **Returns**: `Promise<RentedFacility[]>`
 - **Endpoint**: `GET /api/v1.0/facilities/rented?member_id={memberId}`
@@ -196,13 +254,13 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
  */
 export async function fetchNewFeature(id: number): Promise<NewFeature> {
   const response = await fetch(`${API_BASE_URL}/api/v1.0/new-feature/${id}`);
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch new feature: ${response.statusText}`);
   }
-  
+
   const data = await response.json();
-  
+
   return {
     id: data.id,
     name: data.name,

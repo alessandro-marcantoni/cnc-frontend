@@ -21,6 +21,8 @@
         ChevronLeft,
         Check,
         CreditCard,
+        CircleAlert,
+        LoaderCircle,
     } from "@lucide/svelte";
     import type { CalendarDate } from "@internationalized/date";
     import type {
@@ -28,13 +30,23 @@
         CountryCode,
     } from "$lib/components/ui/phone-input/types";
     import { getSeasons } from "$lib/data/repositories/seasons-repository";
+    import { createMember, type CreateMemberRequest } from "$lib/data/api";
 
     type Props = {
         open?: boolean;
         onOpenChange?: (open: boolean) => void;
+        onMemberCreated?: () => void;
     };
 
-    let { open = $bindable(false), onOpenChange }: Props = $props();
+    let {
+        open = $bindable(false),
+        onOpenChange,
+        onMemberCreated,
+    }: Props = $props();
+
+    // Error and loading state
+    let errorMessage = $state<string | null>(null);
+    let isSubmitting = $state(false);
 
     // Step management
     let currentStep = $state(1);
@@ -60,7 +72,7 @@
 
     // TODO: Replace with actual seasons from API
     const availableSeasons = getSeasons().map((season) => ({
-        value: season.name.toString(),
+        value: season.id.toString(),
         label: season.name.toString(),
     }));
 
@@ -122,16 +134,21 @@
     }
 
     function resetForm() {
-        currentStep = 1;
         firstName = "";
         lastName = "";
         email = "";
         birthDate = undefined;
+        currentStep = 1;
         addMembershipNow = false;
         selectedSeason = undefined;
+        membershipPrice = 130.0;
+        errorMessage = null;
+        isSubmitting = false;
+
         addresses = [
             { country: "", city: "", street: "", number: "", zipCode: "" },
         ];
+
         phoneNumbers = [
             {
                 type: "mobile",
@@ -151,19 +168,103 @@
     }
 
     async function handleSubmit() {
-        // TODO: Implement API call to create member
-        console.log("Creating member:", {
-            firstName,
-            lastName,
-            email,
-            birthDate,
-            addresses,
-            phoneNumbers,
-            membership: addMembershipNow ? { season: selectedSeason } : null,
-        });
+        // Clear any previous errors
+        errorMessage = null;
+        isSubmitting = true;
 
-        // Close dialog and reset form
-        handleOpenChange(false);
+        try {
+            // Validate required fields
+            if (!birthDate) {
+                throw new Error("Data di nascita è obbligatoria");
+            }
+
+            // Prepare phone numbers for API
+            const apiPhoneNumbers = phoneNumbers
+                .filter((phone) => {
+                    if (phone.type === "mobile") {
+                        return phone.mobileNumber && phone.mobileCountry;
+                    } else {
+                        return phone.landlineNumber.trim() !== "";
+                    }
+                })
+                .map((phone) => {
+                    if (phone.type === "mobile") {
+                        // Extract prefix and number from E164 format
+                        const fullNumber = phone.mobileNumber || "";
+                        // E164 format is like +39123456789
+                        // We need to split it into prefix (+39) and number (123456789)
+                        const match = fullNumber.match(/^(\+\d+)(.+)$/);
+                        if (match) {
+                            return {
+                                prefix: match[1], // e.g., "+39"
+                                number: match[2], // e.g., "123456789"
+                            };
+                        }
+                        return {
+                            prefix: "",
+                            number: fullNumber,
+                        };
+                    } else {
+                        return {
+                            prefix: "",
+                            number: phone.landlineNumber,
+                        };
+                    }
+                });
+
+            // Prepare addresses for API
+            const apiAddresses = addresses
+                .filter(
+                    (addr) =>
+                        addr.country.trim() !== "" ||
+                        addr.city.trim() !== "" ||
+                        addr.street.trim() !== "",
+                )
+                .map((addr) => ({
+                    country: addr.country,
+                    city: addr.city,
+                    street: addr.street,
+                    streetNumber: addr.number,
+                    zipCode: addr.zipCode,
+                }));
+
+            // Prepare request
+            const request: CreateMemberRequest = {
+                firstName,
+                lastName,
+                email,
+                birthDate: birthDate.toString(), // Format: YYYY-MM-DD
+                phoneNumbers: apiPhoneNumbers,
+                addresses: apiAddresses,
+                createMembership: addMembershipNow,
+            };
+
+            // Add membership data if needed
+            if (addMembershipNow && selectedSeason) {
+                request.seasonId = parseInt(selectedSeason, 10);
+                request.price = membershipPrice;
+            }
+
+            // Call API
+            await createMember(request);
+
+            // Success! Reset form and close dialog
+            resetForm();
+            open = false;
+
+            // Notify parent component
+            onMemberCreated?.();
+        } catch (error) {
+            // Handle error
+            if (error instanceof Error) {
+                errorMessage = error.message;
+            } else {
+                errorMessage =
+                    "Si è verificato un errore imprevisto durante la creazione del socio";
+            }
+        } finally {
+            isSubmitting = false;
+        }
     }
 
     // Step-specific validation
@@ -280,16 +381,41 @@
             </div>
         </div>
 
+        <!-- Error Alert -->
+        {#if errorMessage}
+            <div
+                class="bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex items-start gap-3"
+            >
+                <CircleAlert class="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                <div class="flex-1">
+                    <h4 class="text-sm font-semibold text-destructive mb-1">
+                        Errore nella creazione del socio
+                    </h4>
+                    <p class="text-sm text-destructive/90">
+                        {errorMessage}
+                    </p>
+                </div>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onclick={() => (errorMessage = null)}
+                    class="h-6 w-6 p-0"
+                >
+                    <span class="sr-only">Chiudi</span>
+                    <span aria-hidden="true">×</span>
+                </Button>
+            </div>
+        {/if}
+
         <form
             onsubmit={(e) => {
                 e.preventDefault();
-                if (currentStep === totalSteps) {
+                if (currentStep === totalSteps && canProceed()) {
                     handleSubmit();
                 }
             }}
-            class="space-y-6"
+            class="space-y-4"
         >
-            <!-- Step 1: Personal Information -->
             {#if currentStep === 1}
                 <div class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
@@ -566,7 +692,11 @@
                                 >
                                     <Select.Trigger id="season" class="w-full">
                                         {selectedSeason
-                                            ? selectedSeason
+                                            ? availableSeasons.find(
+                                                  (s) =>
+                                                      s.value ===
+                                                      selectedSeason,
+                                              )?.label
                                             : "Seleziona stagione"}
                                     </Select.Trigger>
                                     <Select.Content>
@@ -652,9 +782,19 @@
                             <ChevronRight class="h-4 w-4 ml-1" />
                         </Button>
                     {:else}
-                        <Button type="submit" disabled={!canProceed()}>
-                            <UserPlus class="h-4 w-4 mr-2" />
-                            Aggiungi Socio
+                        <Button
+                            type="submit"
+                            disabled={!canProceed() || isSubmitting}
+                        >
+                            {#if isSubmitting}
+                                <LoaderCircle
+                                    class="h-4 w-4 mr-2 animate-spin"
+                                />
+                                Creazione...
+                            {:else}
+                                <UserPlus class="h-4 w-4 mr-2" />
+                                Crea Socio
+                            {/if}
                         </Button>
                     {/if}
                 </div>

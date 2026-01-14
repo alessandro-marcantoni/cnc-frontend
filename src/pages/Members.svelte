@@ -193,4 +193,7 @@
 </main>
 
 <!-- Add Member Dialog -->
-<AddMemberDialog bind:open={addMemberDialogOpen} />
+<AddMemberDialog
+    bind:open={addMemberDialogOpen}
+    onMemberCreated={handleRefresh}
+/>

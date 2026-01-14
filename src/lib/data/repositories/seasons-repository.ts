@@ -3,8 +3,10 @@ import { CalendarDate, getLocalTimeZone, today } from "@internationalized/date";
 
 const seasons: Season[] = [];
 const currentYear = new Date().getFullYear();
-for (let year = 2024; year <= currentYear; year++) {
+for (let year = 2025; year <= currentYear; year++) {
   seasons.push({
+    id: year - 2024,
+    code: year,
     name: year,
     startsAt: new CalendarDate(year, 4, 1), // April 1st
     endsAt: new CalendarDate(year + 1, 3, 31), // March 31st of next year
