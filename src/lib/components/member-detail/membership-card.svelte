@@ -341,6 +341,12 @@
                         Questa persona non era socia nella stagione {selectedSeasonName}.
                     </Empty.Description>
                 </Empty.Header>
+                <Empty.Content>
+                    <Button onclick={onRenew}>
+                        <Plus class="h-4 w-4 mr-2" />
+                        Aggiungi Tessera
+                    </Button>
+                </Empty.Content>
             </Empty.Root>
         </Card.Content>
     </Card.Root>

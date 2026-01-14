@@ -7,3 +7,5 @@ export {
 } from "./facilities-api";
 export { createMember } from "./create-member-api";
 export type { CreateMemberRequest } from "./create-member-api";
+export { addMembership } from "./memberships-api";
+export type { AddMembershipRequest } from "./memberships-api";

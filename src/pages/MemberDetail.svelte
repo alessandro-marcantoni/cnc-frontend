@@ -27,6 +27,7 @@
         isLoadingMemberDetail,
         memberDetailError,
     } from "$lib/data/repositories/member-detail-repository";
+    import { addMembership } from "$lib/data/api";
     import {
         loadRentedFacilities,
         rentedFacilities,
@@ -332,17 +333,39 @@
         isRenewMembershipDialogOpen = true;
     }
 
-    function handleRenewMembershipSubmit() {
-        if (!renewMembershipSeason || !renewMembershipPrice) return;
+    async function handleRenewMembershipSubmit() {
+        if (!renewMembershipSeason || !renewMembershipPrice || !member) return;
 
-        // TODO: Implement renew membership logic here
-        console.log("Renew membership:", {
-            memberId: memberId,
-            season: renewMembershipSeason,
-            price: parseFloat(renewMembershipPrice),
-        });
+        try {
+            // Find the selected season object
+            const selectedSeasonObj = seasons.find(
+                (s) => s.name.toString() === renewMembershipSeason,
+            );
 
-        isRenewMembershipDialogOpen = false;
+            if (!selectedSeasonObj) {
+                console.error("Season not found");
+                return;
+            }
+
+            // Call the API to add the membership
+            const updatedMember = await addMembership(
+                memberId,
+                selectedSeasonObj,
+                parseFloat(renewMembershipPrice),
+            );
+
+            // Update the local member state
+            member = updatedMember;
+
+            // Close the dialog
+            isRenewMembershipDialogOpen = false;
+
+            // Optionally refresh the data to ensure consistency
+            await handleRefresh();
+        } catch (error) {
+            console.error("Failed to add membership:", error);
+            // You might want to show an error toast/notification here
+        }
     }
 
     // Renew facility functions
