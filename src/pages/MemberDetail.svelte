@@ -19,7 +19,6 @@
     import PaymentDialog from "$lib/components/member-detail/payment-dialog.svelte";
     import FreeFacilityDialog from "$lib/components/member-detail/free-facility-dialog.svelte";
     import RenewMembershipDialog from "$lib/components/member-detail/renew-membership-dialog.svelte";
-    import RenewFacilityDialog from "$lib/components/member-detail/renew-facility-dialog.svelte";
 
     import {
         loadMemberDetail,
@@ -95,32 +94,15 @@
     // Combined loading and error states
     let loading = $derived(memberLoading || facilitiesLoading);
     let error = $derived(memberError || facilitiesError);
-
-    // Rent facility dialog state
+    // Rent/Renew facility dialog state
     let isRentDialogOpen = $state(false);
-    let selectedFacilityType = $state<number | null>(null);
-    let selectedFacilityId = $state<number | null>(null);
-    let isWholeSeason = $state(true);
-    let bookingStartDate: CalendarDate | undefined = $state(undefined);
-    let bookingEndDate: CalendarDate | undefined = $state(undefined);
-    let bookingPrice = $state("");
-    let facilityTypeComboboxOpen = $state(false);
-    let rentErrorMessage = $state<string | null>(null);
-    let isRentSubmitting = $state(false);
+    let rentDialogMode = $state<"rent" | "renew">("rent");
+    let renewFacilityToRenew = $state<RentedFacility | null>(null);
 
     // Renew membership dialog state
     let isRenewMembershipDialogOpen = $state(false);
     let renewMembershipSeason = $state<string | undefined>(undefined);
     let renewMembershipPrice = $state("");
-
-    // Renew facility dialog state
-    let isRenewFacilityDialogOpen = $state(false);
-    let renewFacilityToRenew = $state<RentedFacility | null>(null);
-    let renewFacilitySeason = $state<string | undefined>(undefined);
-    let renewFacilityIsWholeSeason = $state(true);
-    let renewFacilityStartDate: CalendarDate | undefined = $state(undefined);
-    let renewFacilityEndDate: CalendarDate | undefined = $state(undefined);
-    let renewFacilityPrice = $state("");
 
     // Modify/Free facility dialog state
     let isPaymentDialogOpen = $state(false);
@@ -136,13 +118,6 @@
     // Load facility catalog on mount
     onMount(() => {
         loadFacilitiesCatalog();
-    });
-
-    // Load facilities when type is selected
-    $effect(() => {
-        if (selectedFacilityType) {
-            loadFacilitiesByType(selectedFacilityType);
-        }
     });
 
     // Load member detail and facilities on mount
@@ -200,123 +175,10 @@
 
     // Rent facility dialog functions
     function openRentDialog() {
-        selectedFacilityType = null;
-        selectedFacilityId = null;
-        facilityTypeComboboxOpen = false;
-        isWholeSeason = true;
-
-        // Set default dates
-        const todayDate: CalendarDate = today(getLocalTimeZone());
-        const currentSeasonData = currentSeason;
-
-        bookingStartDate = todayDate;
-        bookingEndDate = currentSeasonData
-            ? toCalendarDate(currentSeasonData.endsAt)
-            : undefined;
-
-        // Reset price
-        bookingPrice = "";
-
+        rentDialogMode = "rent";
+        renewFacilityToRenew = null;
         isRentDialogOpen = true;
     }
-
-    // Update dates when season toggle changes
-    $effect(() => {
-        if (isRentDialogOpen) {
-            if (isWholeSeason) {
-                const currentSeasonData = currentSeason;
-                if (currentSeasonData) {
-                    bookingStartDate = toCalendarDate(
-                        currentSeasonData.startsAt,
-                    );
-                    bookingEndDate = toCalendarDate(currentSeasonData.endsAt);
-                }
-            } else {
-                const currentSeasonData = currentSeason;
-                bookingStartDate = today(getLocalTimeZone());
-                bookingEndDate = currentSeasonData
-                    ? toCalendarDate(currentSeasonData.endsAt)
-                    : undefined;
-            }
-        }
-    });
-
-    // Update price when facility is selected
-    $effect(() => {
-        if (selectedFacilityId && $facilitiesByType.length > 0) {
-            const facility = $facilitiesByType.find(
-                (f) => f.id === selectedFacilityId,
-            );
-            if (facility) {
-                bookingPrice = facility.suggestedPrice.toString();
-            }
-        }
-    });
-
-    async function handleRentSubmit() {
-        if (!selectedFacilityId || !memberId || !selectedSeason) return;
-
-        // Clear previous errors
-        rentErrorMessage = null;
-        isRentSubmitting = true;
-
-        try {
-            const rentedAt = isWholeSeason
-                ? toCalendarDate(selectedSeason.startsAt)
-                : bookingStartDate;
-            const expiresAt = isWholeSeason
-                ? toCalendarDate(selectedSeason.endsAt)
-                : bookingEndDate;
-
-            // Validate dates
-            if (!rentedAt || !expiresAt) {
-                rentErrorMessage = "Le date di inizio e fine sono obbligatorie";
-                return;
-            }
-
-            if (rentedAt.compare(expiresAt) >= 0) {
-                rentErrorMessage =
-                    "La data di fine deve essere successiva alla data di inizio";
-                return;
-            }
-
-            // Validate price
-            const priceValue = parseFloat(bookingPrice);
-            if (isNaN(priceValue) || priceValue <= 0) {
-                rentErrorMessage = "Il prezzo deve essere maggiore di zero";
-                return;
-            }
-
-            const rentFacilityRequest: RentFacilityRequest = {
-                memberId,
-                facilityId: selectedFacilityId,
-                seasonId: selectedSeason.id,
-                rentedAt: rentedAt.toString(),
-                expiresAt: expiresAt.toString(),
-                price: priceValue,
-            };
-
-            await rentFacility(rentFacilityRequest);
-
-            // Success - close dialog and refresh data
-            isRentDialogOpen = false;
-            await handleRefresh();
-        } catch (error) {
-            // Handle error
-            if (error instanceof Error) {
-                rentErrorMessage = error.message;
-            } else {
-                rentErrorMessage =
-                    "Si è verificato un errore imprevisto durante la prenotazione del servizio";
-            }
-        } finally {
-            isRentSubmitting = false;
-        }
-    }
-
-    const availableFacilitiesForType = $derived(
-        $facilitiesByType.filter((f) => !f.isRented),
-    );
 
     // Modify/Free facility functions
     function openPaymentDialog(facility: RentedFacility) {
@@ -416,65 +278,9 @@
 
     // Renew facility functions
     function openRenewFacilityDialog(facility: RentedFacility) {
+        rentDialogMode = "renew";
         renewFacilityToRenew = facility;
-        renewFacilitySeason = undefined;
-        renewFacilityIsWholeSeason = true;
-        renewFacilityPrice = "";
-
-        // Set default dates based on current season
-        const currentSeasonData = currentSeason;
-        if (currentSeasonData) {
-            renewFacilityStartDate = toCalendarDate(currentSeasonData.startsAt);
-            renewFacilityEndDate = toCalendarDate(currentSeasonData.endsAt);
-        }
-
-        isRenewFacilityDialogOpen = true;
-    }
-
-    // Update dates when season toggle changes for renew dialog
-    $effect(() => {
-        if (isRenewFacilityDialogOpen) {
-            if (renewFacilityIsWholeSeason) {
-                const currentSeasonData = currentSeason;
-                if (currentSeasonData) {
-                    renewFacilityStartDate = toCalendarDate(
-                        currentSeasonData.startsAt,
-                    );
-                    renewFacilityEndDate = toCalendarDate(
-                        currentSeasonData.endsAt,
-                    );
-                }
-            } else {
-                const currentSeasonData = currentSeason;
-                renewFacilityStartDate = today(getLocalTimeZone());
-                renewFacilityEndDate = currentSeasonData
-                    ? toCalendarDate(currentSeasonData.endsAt)
-                    : undefined;
-            }
-        }
-    });
-
-    function handleRenewFacilitySubmit() {
-        if (
-            !renewFacilityToRenew ||
-            !renewFacilitySeason ||
-            !renewFacilityStartDate ||
-            !renewFacilityEndDate ||
-            !renewFacilityPrice
-        )
-            return;
-
-        // TODO: Implement renew facility logic here
-        console.log("Renew facility rental:", {
-            facilityId: renewFacilityToRenew.facilityId,
-            memberId: memberId,
-            season: renewFacilitySeason,
-            startDate: renewFacilityStartDate,
-            endDate: renewFacilityEndDate,
-            price: parseFloat(renewFacilityPrice),
-        });
-
-        isRenewFacilityDialogOpen = false;
+        isRentDialogOpen = true;
     }
 </script>
 
@@ -610,35 +416,23 @@
     {/if}
 </main>
 
-<!-- Rent Facility Dialog -->
+<!-- Rent/Renew Facility Dialog -->
 <RentFacilityDialog
     bind:open={isRentDialogOpen}
+    mode={rentDialogMode}
+    {memberId}
     memberName={member ? `${member.firstName} ${member.lastName}` : ""}
     facilityTypes={$facilitiesCatalog ?? []}
-    availableFacilities={selectedFacilityType
-        ? ($facilitiesByType ?? []).filter((f) => !f.isRented)
-        : []}
-    bind:selectedFacilityType
-    bind:selectedFacilityId
-    bind:isWholeSeason
-    bind:startDate={bookingStartDate}
-    bind:endDate={bookingEndDate}
-    bind:price={bookingPrice}
-    bind:facilityTypeComboboxOpen
-    errorMessage={rentErrorMessage}
-    isSubmitting={isRentSubmitting}
+    availableFacilities={$facilitiesByType ?? []}
+    {currentSeason}
+    availableSeasons={seasons}
+    facilityToRenew={renewFacilityToRenew}
     onClose={() => {
-        isRentDialogOpen = false;
-        rentErrorMessage = null;
+        rentDialogMode = "rent";
+        renewFacilityToRenew = null;
     }}
-    onSubmit={handleRentSubmit}
-    onFacilityTypeSelect={(typeId) => (selectedFacilityType = typeId)}
-    onFacilityIdChange={(facilityId) => (selectedFacilityId = facilityId)}
-    onSeasonToggle={(wholeSeason) => (isWholeSeason = wholeSeason)}
-    onStartDateChange={(date) => (bookingStartDate = date)}
-    onEndDateChange={(date) => (bookingEndDate = date)}
-    onPriceChange={(p) => (bookingPrice = p)}
-    onComboboxToggle={(open) => (facilityTypeComboboxOpen = open)}
+    onSuccess={handleRefresh}
+    onLoadFacilitiesForType={(typeId) => loadFacilitiesByType(typeId)}
 />
 
 <!-- Payment Dialog -->
@@ -679,24 +473,3 @@
 />
 
 <!-- Renew Facility Dialog -->
-<RenewFacilityDialog
-    bind:open={isRenewFacilityDialogOpen}
-    memberName={member ? `${member.firstName} ${member.lastName}` : ""}
-    facilityName={renewFacilityToRenew?.facilityName || ""}
-    facilityIdentifier={renewFacilityToRenew?.facilityIdentifier || ""}
-    {currentSeason}
-    availableSeasons={seasons}
-    bind:selectedSeason={renewFacilitySeason}
-    bind:isWholeSeason={renewFacilityIsWholeSeason}
-    bind:startDate={renewFacilityStartDate}
-    bind:endDate={renewFacilityEndDate}
-    bind:price={renewFacilityPrice}
-    suggestedPrice={0}
-    onClose={() => (isRenewFacilityDialogOpen = false)}
-    onSubmit={handleRenewFacilitySubmit}
-    onSeasonChange={(season) => (renewFacilitySeason = season)}
-    onSeasonToggle={(wholeSeason) => (renewFacilityIsWholeSeason = wholeSeason)}
-    onStartDateChange={(date) => (renewFacilityStartDate = date)}
-    onEndDateChange={(date) => (renewFacilityEndDate = date)}
-    onPriceChange={(price) => (renewFacilityPrice = price)}
-/>
