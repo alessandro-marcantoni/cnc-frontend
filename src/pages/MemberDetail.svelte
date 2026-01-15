@@ -55,6 +55,10 @@
         toCalendarDate,
     } from "@internationalized/date";
     import { formatDate } from "$model/shared/date-utils";
+    import {
+        rentFacility,
+        type RentFacilityRequest,
+    } from "$lib/data/api/facilities-api";
 
     let { route } = $props();
     let memberId = $derived(parseInt(route.result.path.params.id, 10));
@@ -65,9 +69,11 @@
     const currentSeason = getCurrentSeason();
 
     // Selected season state
-    let selectedSeason = $state<Season | null>(currentSeason);
-    let selectedSeasonValue = $state<string>(
-        currentSeason ? currentSeason.name.toString() : "",
+    let selectedSeasonValue = $state<string>(currentSeason.id.toString());
+    let selectedSeason = $derived<Season | null>(
+        seasons.find(
+            (season) => season.id.toString() === selectedSeasonValue,
+        ) ?? null,
     );
 
     let member = $derived(isValidId ? $memberDetail(memberId) : null);
@@ -99,6 +105,8 @@
     let bookingEndDate: CalendarDate | undefined = $state(undefined);
     let bookingPrice = $state("");
     let facilityTypeComboboxOpen = $state(false);
+    let rentErrorMessage = $state<string | null>(null);
+    let isRentSubmitting = $state(false);
 
     // Renew membership dialog state
     let isRenewMembershipDialogOpen = $state(false);
@@ -175,19 +183,13 @@
     $effect(() => {
         if (!isValidId) return;
 
-        if (selectedSeasonValue) {
-            const season = seasons.find(
-                (s) => s.name.toString() === selectedSeasonValue,
-            );
-            if (season) {
-                selectedSeason = season;
-                Promise.all([
-                    loadMemberDetail(memberId, true, selectedSeasonValue),
-                    loadRentedFacilities(memberId, true, selectedSeasonValue),
-                ]).catch((error) => {
-                    console.error("Failed to load data for season:", error);
-                });
-            }
+        if (selectedSeason) {
+            Promise.all([
+                loadMemberDetail(memberId, true, selectedSeasonValue),
+                loadRentedFacilities(memberId, true, selectedSeasonValue),
+            ]).catch((error) => {
+                console.error("Failed to load data for season:", error);
+            });
         }
     });
 
@@ -251,21 +253,65 @@
         }
     });
 
-    function handleRentSubmit() {
-        if (!selectedFacilityId || !memberId) return;
+    async function handleRentSubmit() {
+        if (!selectedFacilityId || !memberId || !selectedSeason) return;
 
-        // TODO: Implement booking logic here
-        console.log("Booking facility:", {
-            facilityId: selectedFacilityId,
-            memberId: memberId,
-            isWholeSeason,
-            startDate: bookingStartDate,
-            endDate: bookingEndDate,
-            price: parseFloat(bookingPrice),
-        });
+        // Clear previous errors
+        rentErrorMessage = null;
+        isRentSubmitting = true;
 
-        // Close dialog
-        isRentDialogOpen = false;
+        try {
+            const rentedAt = isWholeSeason
+                ? toCalendarDate(selectedSeason.startsAt)
+                : bookingStartDate;
+            const expiresAt = isWholeSeason
+                ? toCalendarDate(selectedSeason.endsAt)
+                : bookingEndDate;
+
+            // Validate dates
+            if (!rentedAt || !expiresAt) {
+                rentErrorMessage = "Le date di inizio e fine sono obbligatorie";
+                return;
+            }
+
+            if (rentedAt.compare(expiresAt) >= 0) {
+                rentErrorMessage =
+                    "La data di fine deve essere successiva alla data di inizio";
+                return;
+            }
+
+            // Validate price
+            const priceValue = parseFloat(bookingPrice);
+            if (isNaN(priceValue) || priceValue <= 0) {
+                rentErrorMessage = "Il prezzo deve essere maggiore di zero";
+                return;
+            }
+
+            const rentFacilityRequest: RentFacilityRequest = {
+                memberId,
+                facilityId: selectedFacilityId,
+                seasonId: selectedSeason.id,
+                rentedAt: rentedAt.toString(),
+                expiresAt: expiresAt.toString(),
+                price: priceValue,
+            };
+
+            await rentFacility(rentFacilityRequest);
+
+            // Success - close dialog and refresh data
+            isRentDialogOpen = false;
+            await handleRefresh();
+        } catch (error) {
+            // Handle error
+            if (error instanceof Error) {
+                rentErrorMessage = error.message;
+            } else {
+                rentErrorMessage =
+                    "Si è verificato un errore imprevisto durante la prenotazione del servizio";
+            }
+        } finally {
+            isRentSubmitting = false;
+        }
     }
 
     const availableFacilitiesForType = $derived(
@@ -486,7 +532,11 @@
                     <Select.Root type="single" bind:value={selectedSeasonValue}>
                         <Select.Trigger class="w-40">
                             {#if selectedSeasonValue}
-                                {selectedSeasonValue}
+                                {seasons.find(
+                                    (season) =>
+                                        season.id.toString() ===
+                                        selectedSeasonValue,
+                                )?.name ?? "Seleziona stagione"}
                             {:else}
                                 Seleziona stagione
                             {/if}
@@ -494,8 +544,8 @@
                         <Select.Content>
                             <Select.Group>
                                 <Select.Label>Stagione</Select.Label>
-                                {#each seasons as season (season.name)}
-                                    <Select.Item value={season.name.toString()}>
+                                {#each seasons as season (season.id)}
+                                    <Select.Item value={season.id.toString()}>
                                         {season.name}
                                     </Select.Item>
                                 {/each}
@@ -564,8 +614,10 @@
 <RentFacilityDialog
     bind:open={isRentDialogOpen}
     memberName={member ? `${member.firstName} ${member.lastName}` : ""}
-    facilityTypes={$facilitiesCatalog}
-    availableFacilities={availableFacilitiesForType}
+    facilityTypes={$facilitiesCatalog ?? []}
+    availableFacilities={selectedFacilityType
+        ? ($facilitiesByType ?? []).filter((f) => !f.isRented)
+        : []}
     bind:selectedFacilityType
     bind:selectedFacilityId
     bind:isWholeSeason
@@ -573,14 +625,19 @@
     bind:endDate={bookingEndDate}
     bind:price={bookingPrice}
     bind:facilityTypeComboboxOpen
-    onClose={() => (isRentDialogOpen = false)}
+    errorMessage={rentErrorMessage}
+    isSubmitting={isRentSubmitting}
+    onClose={() => {
+        isRentDialogOpen = false;
+        rentErrorMessage = null;
+    }}
     onSubmit={handleRentSubmit}
     onFacilityTypeSelect={(typeId) => (selectedFacilityType = typeId)}
     onFacilityIdChange={(facilityId) => (selectedFacilityId = facilityId)}
     onSeasonToggle={(wholeSeason) => (isWholeSeason = wholeSeason)}
     onStartDateChange={(date) => (bookingStartDate = date)}
     onEndDateChange={(date) => (bookingEndDate = date)}
-    onPriceChange={(price) => (bookingPrice = price)}
+    onPriceChange={(p) => (bookingPrice = p)}
     onComboboxToggle={(open) => (facilityTypeComboboxOpen = open)}
 />
 

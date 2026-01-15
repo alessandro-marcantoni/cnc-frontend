@@ -1,4 +1,7 @@
-import type { RentedFacility } from "$model/facilities/rented-facility";
+import type {
+  BoatInfo,
+  RentedFacility,
+} from "$model/facilities/rented-facility";
 import type { FacilityType } from "$model/facilities/facility-type";
 import type { FacilityWithStatus } from "$model/facilities/facility-with-status";
 import {
@@ -9,6 +12,15 @@ import {
 
 // Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
+export interface RentFacilityRequest {
+  memberId: number;
+  facilityId: number;
+  seasonId: number;
+  rentedAt: string;
+  expiresAt: string;
+  price: number;
+}
 
 /**
  * Fetch facility catalog (all available facility types) from the API
@@ -98,7 +110,7 @@ export async function fetchRentedFacilities(
     facilityIdentifier: facility.facilityIdentifier,
     facilityName: facility.facilityName,
     facilityTypeDescription: facility.facilityTypeDescription,
-    rentedAt: parseAbsolute(facility.rentedAt, getLocalTimeZone()),
+    rentedAt: parseDate(facility.rentedAt),
     expiresAt: parseDate(facility.expiresAt),
     price: facility.price,
     payment: facility.payment
@@ -120,4 +132,68 @@ export async function fetchRentedFacilities(
   }));
 
   return rentedFacilities;
+}
+
+/**
+ * Create a new facility rental via the API
+ * @param request - The rental creation request data
+ * @returns The created rented facility
+ */
+export async function rentFacility(
+  request: RentFacilityRequest,
+): Promise<RentedFacility> {
+  const url = `${API_BASE_URL}/api/v1.0/facilities/rented`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    // Try to parse error message from response
+    let errorMessage = `Failed to rent facility: ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      if (errorData.error) {
+        errorMessage = errorData.error;
+      }
+    } catch {
+      // If parsing fails, use the default message
+    }
+    throw new Error(errorMessage);
+  }
+
+  const data = await response.json();
+
+  const rentedFacility: RentedFacility = {
+    id: data.id,
+    facilityId: data.facilityId,
+    facilityIdentifier: data.facilityIdentifier,
+    facilityName: data.facilityName,
+    facilityTypeDescription: data.facilityTypeDescription,
+    rentedAt: parseDate(data.rentedAt),
+    expiresAt: parseDate(data.expiresAt),
+    price: data.price,
+    payment: data.payment
+      ? {
+          amount: data.payment.amount,
+          currency: data.payment.currency,
+          paidAt: parseAbsolute(data.payment.paidAt, getLocalTimeZone()),
+          paymentMethod: data.payment.paymentMethod,
+          transactionRef: data.payment.transactionRef,
+        }
+      : null,
+    boatInfo: data.boatInfo
+      ? {
+          name: data.boatInfo.name,
+          lengthMeters: data.boatInfo.lengthMeters,
+          widthMeters: data.boatInfo.widthMeters,
+        }
+      : null,
+  };
+
+  return rentedFacility;
 }

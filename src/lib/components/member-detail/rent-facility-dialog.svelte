@@ -4,9 +4,15 @@
     import * as Popover from "$lib/components/ui/popover";
     import * as Command from "$lib/components/ui/command";
     import * as InputGroup from "$lib/components/ui/input-group";
+
     import { Button } from "$lib/components/ui/button";
     import DatePicker from "$lib/components/ui/date-picker.svelte";
-    import { ChevronsUpDown, Check } from "@lucide/svelte";
+    import {
+        ChevronsUpDown,
+        Check,
+        AlertCircle,
+        Loader2,
+    } from "@lucide/svelte";
     import type { FacilityType } from "$model/facilities/facility-type";
     import type { FacilityWithStatus } from "$model/facilities/facility-with-status";
     import type { CalendarDate } from "@internationalized/date";
@@ -23,6 +29,8 @@
         endDate: CalendarDate | undefined;
         price: string;
         facilityTypeComboboxOpen: boolean;
+        errorMessage?: string | null;
+        isSubmitting?: boolean;
         onClose: () => void;
         onSubmit: () => void;
         onFacilityTypeSelect: (typeId: number) => void;
@@ -46,6 +54,8 @@
         endDate = $bindable(),
         price = $bindable(),
         facilityTypeComboboxOpen = $bindable(),
+        errorMessage = null,
+        isSubmitting = false,
         onClose,
         onSubmit,
         onFacilityTypeSelect,
@@ -283,16 +293,38 @@
             </div>
         </div>
 
+        <!-- Error Message -->
+        {#if errorMessage}
+            <div
+                class="rounded-lg border border-destructive/50 bg-destructive/10 p-3"
+            >
+                <div class="flex items-start gap-2">
+                    <AlertCircle
+                        class="h-4 w-4 text-destructive mt-0.5 shrink-0"
+                    />
+                    <p class="text-sm text-destructive">{errorMessage}</p>
+                </div>
+            </div>
+        {/if}
+
         <Dialog.Footer>
-            <Button variant="outline" onclick={onClose}>Annulla</Button>
+            <Button variant="outline" onclick={onClose} disabled={isSubmitting}>
+                Annulla
+            </Button>
             <Button
                 onclick={onSubmit}
                 disabled={!selectedFacilityId ||
                     !startDate ||
                     !endDate ||
-                    !price}
+                    !price ||
+                    isSubmitting}
             >
-                Conferma Affitto
+                {#if isSubmitting}
+                    <Loader2 class="mr-2 h-4 w-4 animate-spin" />
+                    Affitto in corso...
+                {:else}
+                    Conferma Affitto
+                {/if}
             </Button>
         </Dialog.Footer>
     </Dialog.Content>
