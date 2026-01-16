@@ -117,6 +117,7 @@ export async function fetchRentedFacilities(
     price: facility.price,
     payment: facility.payment
       ? {
+          id: facility.payment.id,
           amount: facility.payment.amount,
           currency: facility.payment.currency,
           paidAt: facility.payment.paidAt,
@@ -181,6 +182,7 @@ export async function rentFacility(
     price: data.price,
     payment: data.payment
       ? {
+          id: data.payment.id,
           amount: data.payment.amount,
           currency: data.payment.currency,
           paidAt: parseAbsolute(data.payment.paidAt, getLocalTimeZone()),

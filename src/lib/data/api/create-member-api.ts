@@ -55,6 +55,7 @@ export interface CreateMemberResponse {
     expiresAt: string;
     price: number;
     payment: {
+      id: number;
       amount: number;
       currency: string;
       paidAt: string;
@@ -124,6 +125,7 @@ export async function createMember(
       price: membership.price,
       payment: membership.payment
         ? {
+            id: membership.payment.id,
             amount: membership.payment.amount,
             currency: membership.payment.currency,
             paidAt: parseAbsolute(

@@ -58,6 +58,7 @@ export async function fetchMemberDetail(
       price: membership.price,
       payment: membership.payment
         ? {
+            id: membership.payment.id,
             amount: membership.payment.amount,
             currency: membership.payment.currency,
             paidAt: parseAbsolute(

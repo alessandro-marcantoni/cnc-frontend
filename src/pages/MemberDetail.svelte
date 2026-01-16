@@ -118,12 +118,6 @@
     let isPaymentDialogOpen = $state(false);
     let isFreeDialogOpen = $state(false);
     let selectedRentedFacility = $state<RentedFacility | null>(null);
-    let paymentAmount = $state("");
-    let paymentMethod = $state("");
-    let paymentTransactionRef = $state("");
-    let paymentDate: CalendarDate | undefined = $state(
-        today(getLocalTimeZone()),
-    );
 
     // Load facility catalog on mount
     onMount(() => {
@@ -182,43 +176,12 @@
     // Modify/Free facility functions
     function openPaymentDialog(facility: RentedFacility) {
         selectedRentedFacility = facility;
-
-        // Pre-fill with existing payment data if available
-        if (facility.payment) {
-            paymentAmount = facility.payment.amount.toString();
-            paymentMethod = facility.payment.paymentMethod || "";
-            paymentTransactionRef = facility.payment.transactionRef || "";
-            paymentDate = facility.payment.paidAt
-                ? toCalendarDate(facility.payment.paidAt)
-                : today(getLocalTimeZone());
-        } else {
-            paymentAmount = "";
-            paymentMethod = "";
-            paymentTransactionRef = "";
-            paymentDate = today(getLocalTimeZone());
-        }
-
         isPaymentDialogOpen = true;
     }
 
     function openFreeDialog(facility: RentedFacility) {
         selectedRentedFacility = facility;
         isFreeDialogOpen = true;
-    }
-
-    function handlePaymentSubmit() {
-        if (!selectedRentedFacility || !paymentAmount) return;
-
-        // TODO: Implement payment update logic here
-        console.log("Update payment:", {
-            rentalId: selectedRentedFacility.id,
-            amount: parseFloat(paymentAmount),
-            method: paymentMethod,
-            transactionRef: paymentTransactionRef,
-            paidAt: paymentDate,
-        });
-
-        isPaymentDialogOpen = false;
     }
 
     function handleFreeFacility() {
@@ -390,6 +353,7 @@
                     selectedSeasonName={selectedSeasonValue ||
                         currentSeason.name.toString()}
                     onRenew={openRenewMembershipDialog}
+                    onSuccess={handleRefresh}
                 />
             </div>
 
@@ -438,17 +402,14 @@
 <!-- Payment Dialog -->
 <PaymentDialog
     bind:open={isPaymentDialogOpen}
-    facility={selectedRentedFacility}
-    bind:amount={paymentAmount}
-    bind:method={paymentMethod}
-    bind:transactionRef={paymentTransactionRef}
-    bind:date={paymentDate}
+    entityType="facility"
+    entityId={selectedRentedFacility?.id || null}
+    entityIdentifier={selectedRentedFacility?.facilityIdentifier || ""}
+    price={selectedRentedFacility?.price}
+    payment={selectedRentedFacility?.payment}
+    includeDateField={false}
     onClose={() => (isPaymentDialogOpen = false)}
-    onSubmit={handlePaymentSubmit}
-    onAmountChange={(amount) => (paymentAmount = amount)}
-    onMethodChange={(method) => (paymentMethod = method)}
-    onTransactionRefChange={(ref) => (paymentTransactionRef = ref)}
-    onDateChange={(date) => (paymentDate = date)}
+    onSuccess={handleRefresh}
 />
 
 <!-- Free Facility Dialog -->
