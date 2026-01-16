@@ -3,6 +3,7 @@
     import { goto } from "@mateothegreat/svelte5-router";
     import Header from "$lib/components/shared/header.svelte";
     import * as Card from "$lib/components/ui/card";
+    import * as Select from "$lib/components/ui/select";
     import { Button } from "$lib/components/ui/button";
     import { Separator } from "$lib/components/ui/separator";
     import FacilitiesDataTable from "$lib/components/facilities/facilities-data-table.svelte";
@@ -12,13 +13,30 @@
         isLoadingFacilitiesByType,
         facilitiesByTypeError,
     } from "$lib/data/repositories";
+    import {
+        getSeasons,
+        getCurrentSeason,
+    } from "$lib/data/repositories/seasons-repository";
     import { ArrowLeft, Layers, CircleAlert } from "@lucide/svelte";
     import FacilitiesStats from "$lib/components/facilities/facilities-stats.svelte";
+    import type { Season } from "$model/shared/season";
 
     // Get facility type ID from route params
     let { route } = $props();
     let facilityTypeId = $derived(parseInt(route.result.path.params.id, 10));
     let isValidId = $derived(!isNaN(facilityTypeId) && facilityTypeId > 0);
+
+    // Get available seasons
+    const seasons = getSeasons();
+    const currentSeason = getCurrentSeason();
+
+    // Selected season state
+    let selectedSeasonValue = $state<string>(currentSeason.id.toString());
+    let selectedSeason = $derived<Season | null>(
+        seasons.find(
+            (season) => season.id.toString() === selectedSeasonValue,
+        ) ?? null,
+    );
 
     // Track facility type details from first facility
     let facilityTypeName = $state("");
@@ -35,17 +53,15 @@
         }
     });
 
-    onMount(async () => {
-        if (!isValidId) {
-            console.error("No valid facility type ID provided");
-            return;
-        }
+    // Load facilities when season or facility type changes
+    $effect(() => {
+        if (!isValidId || !selectedSeason) return;
 
-        try {
-            await loadFacilitiesByType(facilityTypeId);
-        } catch (error) {
-            console.error("Failed to load facilities:", error);
-        }
+        loadFacilitiesByType(facilityTypeId, selectedSeason.id).catch(
+            (error) => {
+                console.error("Failed to load facilities:", error);
+            },
+        );
     });
 
     function formatPrice(price: number): string {
@@ -64,11 +80,35 @@
 
 <!-- Main Content -->
 <main class="container mx-auto px-4 py-8">
-    <!-- Back Button -->
-    <Button variant="ghost" onclick={goBack} class="mb-6 -ml-2">
-        <ArrowLeft class="mr-2 h-4 w-4" />
-        Torna ai Servizi
-    </Button>
+    <!-- Back Button and Season Selector -->
+    <div class="flex items-center justify-between mb-6">
+        <Button variant="ghost" onclick={goBack} class="-ml-2">
+            <ArrowLeft class="mr-2 h-4 w-4" />
+            Torna ai Servizi
+        </Button>
+
+        <!-- Season Selector -->
+        <div class="flex items-center gap-2">
+            <span class="text-sm font-medium">Stagione:</span>
+            <Select.Root type="single" bind:value={selectedSeasonValue}>
+                <Select.Trigger class="w-40">
+                    {selectedSeason
+                        ? `Stagione ${selectedSeason.name}`
+                        : "Seleziona stagione"}
+                </Select.Trigger>
+                <Select.Content>
+                    <Select.Group>
+                        <Select.Label>Stagioni Disponibili</Select.Label>
+                        {#each seasons as season (season.name)}
+                            <Select.Item value={season.id.toString()}>
+                                Stagione {season.name}
+                            </Select.Item>
+                        {/each}
+                    </Select.Group>
+                </Select.Content>
+            </Select.Root>
+        </div>
+    </div>
 
     <!-- Loading State -->
     {#if $isLoadingFacilitiesByType}

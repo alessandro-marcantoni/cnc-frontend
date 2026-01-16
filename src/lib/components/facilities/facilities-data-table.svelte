@@ -14,9 +14,9 @@
         ChevronDown,
         CircleCheck,
         CircleX,
-        Calendar,
         ChevronsUpDown,
         Check,
+        SquareArrowOutUpRight,
     } from "@lucide/svelte";
     import type { FacilityWithStatus } from "$model/facilities/facility-with-status";
     import type { Member } from "$model/members/member";
@@ -26,7 +26,7 @@
     } from "$lib/data/repositories/members-repository";
     import { getCurrentSeason } from "$lib/data/repositories/seasons-repository";
     import { onMount } from "svelte";
-    import { formatDate } from "$model/shared/date-utils";
+    import { goto } from "@mateothegreat/svelte5-router";
     import {
         CalendarDate,
         getLocalTimeZone,
@@ -316,7 +316,7 @@
                             class="flex items-center gap-1 font-medium hover:text-foreground"
                             onclick={() => handleSort("expiresAt")}
                         >
-                            Scadenza Affitto
+                            Affittato da
                             {#if isSortedAsc("expiresAt")}
                                 <ChevronUp class="h-4 w-4" />
                             {:else if isSortedDesc("expiresAt")}
@@ -348,15 +348,24 @@
                                 {/if}
                             </Table.Cell>
                             <Table.Cell>
-                                {#if facility.isRented && facility.expiresAt}
-                                    <div class="flex items-center gap-2">
-                                        <Calendar
-                                            class="h-4 w-4 text-muted-foreground"
-                                        />
-                                        <span>
-                                            {formatDate(facility.expiresAt)}
+                                {#if facility.isRented && facility.rentedByMemberFirstName && facility.rentedByMemberLastName && facility.rentedByMemberId}
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        class="h-6 px-2 font-medium hover:bg-accent"
+                                        onclick={() =>
+                                            goto(
+                                                `/members/${facility.rentedByMemberId}`,
+                                            )}
+                                    >
+                                        <span class="mr-1.5">
+                                            {facility.rentedByMemberFirstName}
+                                            {facility.rentedByMemberLastName}
                                         </span>
-                                    </div>
+                                        <SquareArrowOutUpRight
+                                            class="h-3.5 w-3.5 opacity-70"
+                                        />
+                                    </Button>
                                 {:else}
                                     <span class="text-muted-foreground">-</span>
                                 {/if}

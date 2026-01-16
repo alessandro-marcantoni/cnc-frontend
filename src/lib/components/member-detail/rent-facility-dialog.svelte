@@ -6,7 +6,7 @@
     import * as InputGroup from "$lib/components/ui/input-group";
     import { Button } from "$lib/components/ui/button";
     import { Label } from "$lib/components/ui/label";
-    import DatePicker from "$lib/components/ui/date-picker.svelte";
+
     import {
         ChevronsUpDown,
         Check,
@@ -14,12 +14,7 @@
         Loader2,
         RefreshCw,
     } from "@lucide/svelte";
-    import {
-        CalendarDate,
-        getLocalTimeZone,
-        today,
-        toCalendarDate,
-    } from "@internationalized/date";
+
     import type { FacilityType } from "$model/facilities/facility-type";
     import type { FacilityWithStatus } from "$model/facilities/facility-with-status";
     import type { Season } from "$model/shared/season";
@@ -63,9 +58,6 @@
     let selectedFacilityType = $state<number | null>(null);
     let selectedFacilityId = $state<number | null>(null);
     let selectedSeason = $state<string>("");
-    let isWholeSeason = $state(true);
-    let startDate = $state<CalendarDate | undefined>(undefined);
-    let endDate = $state<CalendarDate | undefined>(undefined);
     let price = $state("");
     let facilityTypeComboboxOpen = $state(false);
     let errorMessage = $state<string | null>(null);
@@ -81,7 +73,6 @@
             errorMessage = null;
             isSubmitting = false;
             selectedSeason = defaultSeason;
-            isWholeSeason = true;
 
             if (isRenewMode && facilityToRenew) {
                 // Renew mode: use existing facility
@@ -102,28 +93,6 @@
                 selectedFacilityType = null;
                 selectedFacilityId = null;
                 price = "";
-            }
-
-            // Set initial dates - will be handled by the effect below
-        }
-    });
-
-    // Update dates when season or toggle changes
-    $effect(() => {
-        if (open && selectedSeason) {
-            // Read selectedSeason and isWholeSeason to make effect reactive to them
-            const seasonObj = availableSeasons.find(
-                (s) => s.name.toString() === selectedSeason,
-            );
-
-            if (seasonObj) {
-                if (isWholeSeason) {
-                    startDate = toCalendarDate(seasonObj.startsAt);
-                    endDate = toCalendarDate(seasonObj.endsAt);
-                } else {
-                    startDate = today(getLocalTimeZone());
-                    endDate = toCalendarDate(seasonObj.endsAt);
-                }
             }
         }
     });
@@ -183,8 +152,6 @@
 
     const isValid = $derived(
         selectedSeason &&
-            startDate &&
-            endDate &&
             price &&
             parseFloat(price) > 0 &&
             (isRenewMode || selectedFacilityId !== null),
@@ -212,18 +179,6 @@
                 return;
             }
 
-            // Validate dates
-            if (!startDate || !endDate) {
-                errorMessage = "Le date di inizio e fine sono obbligatorie";
-                return;
-            }
-
-            if (startDate.compare(endDate) >= 0) {
-                errorMessage =
-                    "La data di fine deve essere successiva alla data di inizio";
-                return;
-            }
-
             // Validate price
             const priceValue = parseFloat(price);
             if (isNaN(priceValue) || priceValue <= 0) {
@@ -246,8 +201,6 @@
                 memberId,
                 facilityId,
                 seasonId: selectedSeasonObj.id,
-                rentedAt: startDate.toString(),
-                expiresAt: endDate.toString(),
                 price: priceValue,
             };
 
@@ -458,58 +411,6 @@
                     </div>
                 {/if}
             {/if}
-
-            <!-- Season Toggle -->
-            <div class="grid gap-2">
-                <label class="text-sm font-medium" for="season-trigger"
-                    >Periodo</label
-                >
-                <div class="flex gap-2">
-                    <Button
-                        variant={isWholeSeason ? "default" : "outline"}
-                        size="sm"
-                        class="flex-1"
-                        onclick={() => (isWholeSeason = true)}
-                        type="button"
-                    >
-                        Intera Stagione
-                    </Button>
-                    <Button
-                        variant={!isWholeSeason ? "default" : "outline"}
-                        size="sm"
-                        class="flex-1"
-                        onclick={() => (isWholeSeason = false)}
-                        type="button"
-                    >
-                        Date Personalizzate
-                    </Button>
-                </div>
-            </div>
-
-            <!-- Date Inputs -->
-            <div class="grid grid-cols-2 gap-2">
-                <!-- Start Date -->
-                <div class="grid gap-2">
-                    <DatePicker
-                        id="start-date"
-                        label="Data Inizio *"
-                        bind:value={startDate}
-                        disabled={isWholeSeason}
-                        placeholder="Seleziona data inizio"
-                    />
-                </div>
-
-                <!-- End Date -->
-                <div class="grid gap-2">
-                    <DatePicker
-                        id="end-date"
-                        label="Data Fine *"
-                        bind:value={endDate}
-                        disabled={isWholeSeason}
-                        placeholder="Seleziona data fine"
-                    />
-                </div>
-            </div>
 
             <!-- Price Input -->
             <div class="grid gap-2">

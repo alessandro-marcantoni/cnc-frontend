@@ -5,7 +5,6 @@ import {
   getLocalTimeZone,
   parseAbsolute,
   parseDate,
-  CalendarDateTime,
 } from "@internationalized/date";
 
 // Configuration
@@ -14,8 +13,6 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 export interface AddMembershipRequest {
   memberId: number;
   seasonId: number;
-  seasonStartsAt: string; // ISO 8601 format
-  seasonEndsAt: string; // ISO 8601 format
   price: number;
 }
 
@@ -65,34 +62,9 @@ export async function addMembership(
   season: Season,
   price: number,
 ): Promise<MemberDetail> {
-  // Convert season dates to start of day (00:00) and end of day (23:59)
-  // Create CalendarDateTime with start of day (00:00:00)
-  const seasonStart = new CalendarDateTime(
-    season.startsAt.year,
-    season.startsAt.month,
-    season.startsAt.day,
-    0,
-    0,
-    0,
-    0,
-  );
-
-  // Create CalendarDateTime with end of day (23:59:59)
-  const seasonEnd = new CalendarDateTime(
-    season.endsAt.year,
-    season.endsAt.month,
-    season.endsAt.day,
-    23,
-    59,
-    59,
-    999,
-  );
-
   const request: AddMembershipRequest = {
     memberId,
     seasonId: season.id,
-    seasonStartsAt: seasonStart.toString(),
-    seasonEndsAt: seasonEnd.toString(),
     price,
   };
 

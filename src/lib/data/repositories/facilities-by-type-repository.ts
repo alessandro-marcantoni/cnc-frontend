@@ -5,22 +5,29 @@ import { fetchFacilitiesByType } from "$lib/data/api";
 // Configuration
 const USE_MOCK_DATA = import.meta.env.DEV && !import.meta.env.VITE_API_URL;
 
-interface TypeCache {
+interface TypeSeasonCache {
   data: FacilityWithStatus[];
   timestamp: number;
 }
 
 interface FacilitiesByTypeState {
-  cachesByType: Map<number, TypeCache>;
+  cachesByTypeAndSeason: Map<string, TypeSeasonCache>;
   currentTypeId: number | null;
+  currentSeasonId: number | null;
   isLoading: boolean;
   error: string | null;
 }
 
+// Helper function to create cache key
+function getCacheKey(facilityTypeId: number, seasonId: number): string {
+  return `${facilityTypeId}-${seasonId}`;
+}
+
 // Initial state
 const initialState: FacilitiesByTypeState = {
-  cachesByType: new Map(),
+  cachesByTypeAndSeason: new Map(),
   currentTypeId: null,
+  currentSeasonId: null,
   isLoading: false,
   error: null,
 };
@@ -33,8 +40,9 @@ const facilitiesByTypeState = writable<FacilitiesByTypeState>(initialState);
  */
 async function fetchFacilitiesByTypeData(
   facilityTypeId: number,
+  seasonId: number,
 ): Promise<FacilityWithStatus[]> {
-  return fetchFacilitiesByType(facilityTypeId);
+  return fetchFacilitiesByType(facilityTypeId, seasonId);
 }
 
 /**
@@ -42,20 +50,26 @@ async function fetchFacilitiesByTypeData(
  */
 export async function loadFacilitiesByType(
   facilityTypeId: number,
+  seasonId: number,
   forceRefresh = false,
 ): Promise<FacilityWithStatus[]> {
   const state = get(facilitiesByTypeState);
+  const cacheKey = getCacheKey(facilityTypeId, seasonId);
 
-  // Check if we have cached data for this type
-  const cached = state.cachesByType.get(facilityTypeId);
+  // Check if we have cached data for this type and season combination
+  const cached = state.cachesByTypeAndSeason.get(cacheKey);
 
   // Return cached data if valid and not forcing refresh
   if (!forceRefresh && cached && cached.data.length > 0) {
-    // Update current type ID if different
-    if (state.currentTypeId !== facilityTypeId) {
+    // Update current type ID and season ID if different
+    if (
+      state.currentTypeId !== facilityTypeId ||
+      state.currentSeasonId !== seasonId
+    ) {
       facilitiesByTypeState.update((s) => ({
         ...s,
         currentTypeId: facilityTypeId,
+        currentSeasonId: seasonId,
       }));
     }
     return cached.data;
@@ -67,22 +81,23 @@ export async function loadFacilitiesByType(
     isLoading: true,
     error: null,
     currentTypeId: facilityTypeId,
+    currentSeasonId: seasonId,
   }));
 
   try {
-    const data = await fetchFacilitiesByTypeData(facilityTypeId);
+    const data = await fetchFacilitiesByTypeData(facilityTypeId, seasonId);
 
-    // Update cache with fresh data for this type
+    // Update cache with fresh data for this type and season
     facilitiesByTypeState.update((s) => {
-      const newCaches = new Map(s.cachesByType);
-      newCaches.set(facilityTypeId, {
+      const newCaches = new Map(s.cachesByTypeAndSeason);
+      newCaches.set(cacheKey, {
         data,
         timestamp: Date.now(),
       });
 
       return {
         ...s,
-        cachesByType: newCaches,
+        cachesByTypeAndSeason: newCaches,
         isLoading: false,
         error: null,
       };
@@ -112,23 +127,48 @@ export function clearFacilitiesByTypeCache(): void {
 }
 
 /**
- * Clear cache for a specific type
+ * Clear cache for a specific type (all seasons)
  */
 export function clearTypeCache(facilityTypeId: number): void {
   facilitiesByTypeState.update((s) => {
-    const newCaches = new Map(s.cachesByType);
-    newCaches.delete(facilityTypeId);
+    const newCaches = new Map(s.cachesByTypeAndSeason);
+    // Remove all entries that start with the facility type ID
+    for (const key of newCaches.keys()) {
+      if (key.startsWith(`${facilityTypeId}-`)) {
+        newCaches.delete(key);
+      }
+    }
     return {
       ...s,
-      cachesByType: newCaches,
+      cachesByTypeAndSeason: newCaches,
+    };
+  });
+}
+
+/**
+ * Clear cache for a specific type and season combination
+ */
+export function clearTypeSeasonCache(
+  facilityTypeId: number,
+  seasonId: number,
+): void {
+  const cacheKey = getCacheKey(facilityTypeId, seasonId);
+  facilitiesByTypeState.update((s) => {
+    const newCaches = new Map(s.cachesByTypeAndSeason);
+    newCaches.delete(cacheKey);
+    return {
+      ...s,
+      cachesByTypeAndSeason: newCaches,
     };
   });
 }
 
 // Exported derived stores for reactive access
 export const facilitiesByType = derived(facilitiesByTypeState, ($state) => {
-  if ($state.currentTypeId === null) return [];
-  const cached = $state.cachesByType.get($state.currentTypeId);
+  if ($state.currentTypeId === null || $state.currentSeasonId === null)
+    return [];
+  const cacheKey = getCacheKey($state.currentTypeId, $state.currentSeasonId);
+  const cached = $state.cachesByTypeAndSeason.get(cacheKey);
   return cached?.data || [];
 });
 
@@ -147,10 +187,17 @@ export const currentFacilityTypeId = derived(
   ($state) => $state.currentTypeId,
 );
 
-// Computed store for cache age in seconds for current type
+export const currentSeasonId = derived(
+  facilitiesByTypeState,
+  ($state) => $state.currentSeasonId,
+);
+
+// Computed store for cache age in seconds for current type and season
 export const cacheAge = derived(facilitiesByTypeState, ($state) => {
-  if ($state.currentTypeId === null) return null;
-  const cached = $state.cachesByType.get($state.currentTypeId);
+  if ($state.currentTypeId === null || $state.currentSeasonId === null)
+    return null;
+  const cacheKey = getCacheKey($state.currentTypeId, $state.currentSeasonId);
+  const cached = $state.cachesByTypeAndSeason.get(cacheKey);
   if (!cached || cached.timestamp === 0) return null;
   return Math.floor((Date.now() - cached.timestamp) / 1000);
 });

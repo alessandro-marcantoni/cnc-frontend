@@ -44,10 +44,12 @@ export {
   loadFacilitiesByType,
   clearFacilitiesByTypeCache,
   clearTypeCache,
+  clearTypeSeasonCache,
   facilitiesByType,
   isLoadingFacilitiesByType,
   facilitiesByTypeError,
   currentFacilityTypeId,
+  currentSeasonId,
   availableFacilities,
   rentedFacilitiesByType,
 } from "./facilities-by-type-repository";

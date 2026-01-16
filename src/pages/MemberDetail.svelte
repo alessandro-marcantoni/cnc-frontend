@@ -432,7 +432,8 @@
         renewFacilityToRenew = null;
     }}
     onSuccess={handleRefresh}
-    onLoadFacilitiesForType={(typeId) => loadFacilitiesByType(typeId)}
+    onLoadFacilitiesForType={(typeId) =>
+        loadFacilitiesByType(typeId, selectedSeason?.id ?? currentSeason.id)}
 />
 
 <!-- Payment Dialog -->

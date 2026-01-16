@@ -7,4 +7,7 @@ export type FacilityWithStatus = {
   suggestedPrice: number;
   isRented: boolean;
   expiresAt?: string;
+  rentedByMemberId?: number;
+  rentedByMemberFirstName?: string;
+  rentedByMemberLastName?: string;
 };

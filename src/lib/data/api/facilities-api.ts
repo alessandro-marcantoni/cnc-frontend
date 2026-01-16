@@ -17,8 +17,6 @@ export interface RentFacilityRequest {
   memberId: number;
   facilityId: number;
   seasonId: number;
-  rentedAt: string;
-  expiresAt: string;
   price: number;
 }
 
@@ -52,9 +50,10 @@ export async function fetchFacilitiesCatalog(): Promise<FacilityType[]> {
  */
 export async function fetchFacilitiesByType(
   facilityTypeId: number,
+  seasonId: number,
 ): Promise<FacilityWithStatus[]> {
   const response = await fetch(
-    `${API_BASE_URL}/api/v1.0/facilities?facility_type_id=${facilityTypeId}`,
+    `${API_BASE_URL}/api/v1.0/facilities?facility_type_id=${facilityTypeId}&season=${seasonId}`,
   );
 
   if (!response.ok) {
@@ -75,6 +74,9 @@ export async function fetchFacilitiesByType(
     suggestedPrice: facility.suggestedPrice,
     isRented: facility.isRented,
     expiresAt: facility.expiresAt,
+    rentedByMemberId: facility.rentedByMemberId,
+    rentedByMemberFirstName: facility.rentedByMemberFirstName,
+    rentedByMemberLastName: facility.rentedByMemberLastName,
   }));
 
   return facilities;
