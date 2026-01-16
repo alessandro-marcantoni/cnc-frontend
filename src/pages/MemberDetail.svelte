@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount } from "svelte";
+    import { onMount, untrack } from "svelte";
     import Header from "$lib/components/shared/header.svelte";
     import * as Select from "$lib/components/ui/select";
     import { Button } from "$lib/components/ui/button";
@@ -58,6 +58,7 @@
         rentFacility,
         type RentFacilityRequest,
     } from "$lib/data/api/facilities-api";
+    import { getQueryParam, setQueryParam } from "$lib/utils/query-params";
 
     let { route } = $props();
     let memberId = $derived(parseInt(route.result.path.params.id, 10));
@@ -67,8 +68,17 @@
     const seasons = getSeasons();
     const currentSeason = getCurrentSeason();
 
-    // Selected season state
-    let selectedSeasonValue = $state<string>(currentSeason.id.toString());
+    // Initialize season from URL query param (using season name) or default to current season
+    const seasonNameFromUrl = getQueryParam("season");
+    const seasonFromUrl = seasonNameFromUrl
+        ? seasons.find((s) => s.name.toString() === seasonNameFromUrl)
+        : null;
+    const initialSeasonId = seasonFromUrl
+        ? seasonFromUrl.id.toString()
+        : currentSeason.id.toString();
+
+    // Selected season state (stores ID internally)
+    let selectedSeasonValue = $state<string>(initialSeasonId);
     let selectedSeason = $derived<Season | null>(
         seasons.find(
             (season) => season.id.toString() === selectedSeasonValue,
@@ -120,24 +130,6 @@
         loadFacilitiesCatalog();
     });
 
-    // Load member detail and facilities on mount
-    onMount(async () => {
-        if (!isValidId) {
-            console.error("Invalid member ID:", memberId);
-            return;
-        }
-
-        try {
-            const season = selectedSeasonValue || undefined;
-            await Promise.all([
-                loadMemberDetail(memberId, false, season),
-                loadRentedFacilities(memberId, false, season),
-            ]);
-        } catch (error) {
-            console.error("Failed to load data:", error);
-        }
-    });
-
     async function handleRefresh() {
         if (!isValidId) {
             return;
@@ -158,10 +150,17 @@
     $effect(() => {
         if (!isValidId) return;
 
+        // Update URL with season name (not ID) without triggering the effect again
+        untrack(() => {
+            if (selectedSeason) {
+                setQueryParam("season", selectedSeason.name.toString());
+            }
+        });
+
         if (selectedSeason) {
             Promise.all([
-                loadMemberDetail(memberId, true, selectedSeasonValue),
-                loadRentedFacilities(memberId, true, selectedSeasonValue),
+                loadMemberDetail(memberId, false, selectedSeasonValue),
+                loadRentedFacilities(memberId, false, selectedSeasonValue),
             ]).catch((error) => {
                 console.error("Failed to load data for season:", error);
             });

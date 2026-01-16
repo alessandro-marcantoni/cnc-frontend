@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount } from "svelte";
+    import { onMount, untrack } from "svelte";
     import MembersStats from "$lib/components/members/members-stats.svelte";
     import AllMembersDataTable from "$lib/components/members/all-members-data-table.svelte";
     import SeasonMembersDataTable from "$lib/components/members/season-members-data-table.svelte";
@@ -21,6 +21,7 @@
     } from "$lib/data/repositories/seasons-repository";
     import type { Season } from "$model/shared/season";
     import { formatDate } from "$model/shared/date-utils";
+    import { getQueryParam, setQueryParam } from "$lib/utils/query-params";
 
     // Dialog state
     let addMemberDialogOpen = $state(false);
@@ -28,21 +29,21 @@
     // Get available seasons
     const seasons = getSeasons();
 
-    // Selected season state - default to empty string for "all seasons"
-    let selectedSeason = $state<Season | null>(null);
-    let selectedSeasonValue = $state<string>("");
+    // Initialize season from URL query param (using season name) or default to null for "all seasons"
+    const seasonNameFromUrl = getQueryParam("season");
+    const seasonFromUrl = seasonNameFromUrl
+        ? seasons.find((s) => s.name.toString() === seasonNameFromUrl)
+        : null;
 
-    // Load members on mount
-    onMount(async () => {
-        try {
-            await loadMembers(false, undefined); // Load all seasons by default
-        } catch (error) {
-            console.error("Failed to load members:", error);
-        }
-    });
+    // Selected season state - stores season ID internally (empty string for "all seasons")
+    let selectedSeason = $state<Season | null>(seasonFromUrl ?? null);
+    let selectedSeasonValue = $state<string>(
+        seasonFromUrl ? seasonFromUrl.id.toString() : "",
+    );
 
     async function handleRefresh() {
         try {
+            // Pass season ID (or undefined for all seasons)
             await loadMembers(true, selectedSeasonValue || undefined);
         } catch (error) {
             console.error("Failed to refresh members:", error);
@@ -52,18 +53,28 @@
     // Watch for season changes and reload members
     $effect(() => {
         if (selectedSeasonValue === "") {
-            // All seasons selected - don't pass season parameter to API
+            // All seasons selected
             selectedSeason = null;
-            loadMembers(true, undefined).catch((error) => {
+            // Update URL without triggering the effect again
+            untrack(() => {
+                setQueryParam("season", null);
+            });
+            loadMembers(false, undefined).catch((error) => {
                 console.error("Failed to load members for all seasons:", error);
             });
         } else if (selectedSeasonValue) {
+            // Specific season selected - find season object by ID
             const season = seasons.find(
-                (s) => s.name.toString() === selectedSeasonValue,
+                (s) => s.id.toString() === selectedSeasonValue,
             );
             if (season) {
                 selectedSeason = season;
-                loadMembers(true, selectedSeasonValue).catch((error) => {
+                // Update URL with season name (not ID)
+                untrack(() => {
+                    setQueryParam("season", season.name.toString());
+                });
+                // Pass season ID to API
+                loadMembers(false, selectedSeasonValue).catch((error) => {
                     console.error("Failed to load members for season:", error);
                 });
             }
@@ -112,8 +123,8 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <Card.Title
-                            >Elenco Soci {selectedSeasonValue
-                                ? `(${selectedSeasonValue})`
+                            >Elenco Soci {selectedSeason
+                                ? `(${selectedSeason.name})`
                                 : ""}</Card.Title
                         >
                         <Card.Description>
@@ -153,7 +164,11 @@
                     <Select.Root type="single" bind:value={selectedSeasonValue}>
                         <Select.Trigger class="w-50">
                             {#if selectedSeasonValue}
-                                Stagione {selectedSeasonValue}
+                                {seasons.find(
+                                    (season) =>
+                                        season.id.toString() ===
+                                        selectedSeasonValue,
+                                )?.name ?? "Seleziona stagione"}
                             {:else}
                                 Tutte le stagioni
                             {/if}
@@ -166,7 +181,7 @@
                                     Tutte le stagioni
                                 </Select.Item>
                                 {#each seasons as season (season.name)}
-                                    <Select.Item value={season.name.toString()}>
+                                    <Select.Item value={season.id.toString()}>
                                         Stagione {season.name}
                                     </Select.Item>
                                 {/each}

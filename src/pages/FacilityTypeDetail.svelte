@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount } from "svelte";
+    import { onMount, untrack } from "svelte";
     import { goto } from "@mateothegreat/svelte5-router";
     import Header from "$lib/components/shared/header.svelte";
     import * as Card from "$lib/components/ui/card";
@@ -20,6 +20,7 @@
     import { ArrowLeft, Layers, CircleAlert } from "@lucide/svelte";
     import FacilitiesStats from "$lib/components/facilities/facilities-stats.svelte";
     import type { Season } from "$model/shared/season";
+    import { getQueryParam, setQueryParam } from "$lib/utils/query-params";
 
     // Get facility type ID from route params
     let { route } = $props();
@@ -30,8 +31,17 @@
     const seasons = getSeasons();
     const currentSeason = getCurrentSeason();
 
-    // Selected season state
-    let selectedSeasonValue = $state<string>(currentSeason.id.toString());
+    // Initialize season from URL query param (using season name) or default to current season
+    const seasonNameFromUrl = getQueryParam("season");
+    const seasonFromUrl = seasonNameFromUrl
+        ? seasons.find((s) => s.name.toString() === seasonNameFromUrl)
+        : null;
+    const initialSeasonId = seasonFromUrl
+        ? seasonFromUrl.id.toString()
+        : currentSeason.id.toString();
+
+    // Selected season state (stores ID internally)
+    let selectedSeasonValue = $state<string>(initialSeasonId);
     let selectedSeason = $derived<Season | null>(
         seasons.find(
             (season) => season.id.toString() === selectedSeasonValue,
@@ -53,9 +63,14 @@
         }
     });
 
-    // Load facilities when season or facility type changes
+    // Load facilities when season or facility type changes, and sync URL
     $effect(() => {
         if (!isValidId || !selectedSeason) return;
+
+        // Update URL with season name (not ID) without triggering the effect again
+        untrack(() => {
+            setQueryParam("season", selectedSeason.name.toString());
+        });
 
         loadFacilitiesByType(facilityTypeId, selectedSeason.id).catch(
             (error) => {
