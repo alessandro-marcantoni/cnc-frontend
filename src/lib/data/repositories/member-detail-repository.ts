@@ -15,9 +15,9 @@ interface CacheEntry {
 
 // Store state
 interface MemberDetailState {
-  cache: Map<number, CacheEntry>;
-  loading: Set<number>;
-  errors: Map<number, string>;
+  cache: Map<string, CacheEntry>;
+  loading: Set<string>;
+  errors: Map<string, string>;
 }
 
 const initialState: MemberDetailState = {
@@ -29,20 +29,30 @@ const initialState: MemberDetailState = {
 // Internal store
 const memberDetailStore = writable<MemberDetailState>(initialState);
 
+/**
+ * Creates a cache key from memberId and optional season
+ */
+function getCacheKey(memberId: number, season?: number): string {
+  return season !== undefined ? `${memberId}-${season}` : `${memberId}`;
+}
+
 // Public derived stores
 export const isLoadingMemberDetail = derived(
   memberDetailStore,
-  ($store) => (memberId: number) => $store.loading.has(memberId),
+  ($store) => (memberId: number, season?: number) =>
+    $store.loading.has(getCacheKey(memberId, season)),
 );
 
 export const memberDetailError = derived(
   memberDetailStore,
-  ($store) => (memberId: number) => $store.errors.get(memberId) || null,
+  ($store) => (memberId: number, season?: number) =>
+    $store.errors.get(getCacheKey(memberId, season)) || null,
 );
 
 export const memberDetail = derived(
   memberDetailStore,
-  ($store) => (memberId: number) => $store.cache.get(memberId)?.data || null,
+  ($store) => (memberId: number, season?: number) =>
+    $store.cache.get(getCacheKey(memberId, season))?.data || null,
 );
 
 /**
@@ -50,7 +60,7 @@ export const memberDetail = derived(
  */
 async function fetchMemberDetailData(
   memberId: number,
-  season?: string,
+  season?: number,
 ): Promise<MemberDetail> {
   if (USE_MOCK_DATA) {
     const memberDetail = mockMemberDetails[memberId];
@@ -80,29 +90,30 @@ function isCacheValid(entry: CacheEntry | undefined): boolean {
 export async function loadMemberDetail(
   memberId: number,
   forceRefresh = false,
-  season?: string,
+  season?: number,
 ): Promise<MemberDetail> {
+  const cacheKey = getCacheKey(memberId, season);
   const state = get(memberDetailStore);
 
   // Check cache
-  const cachedEntry = state.cache.get(memberId);
+  const cachedEntry = state.cache.get(cacheKey);
   if (!forceRefresh && isCacheValid(cachedEntry)) {
     return cachedEntry!.data;
   }
 
   // Check if already loading
-  if (state.loading.has(memberId)) {
+  if (state.loading.has(cacheKey)) {
     // Wait for the ongoing request
     return new Promise((resolve, reject) => {
       const checkInterval = setInterval(() => {
         const currentState = get(memberDetailStore);
-        if (!currentState.loading.has(memberId)) {
+        if (!currentState.loading.has(cacheKey)) {
           clearInterval(checkInterval);
-          const entry = currentState.cache.get(memberId);
+          const entry = currentState.cache.get(cacheKey);
           if (entry) {
             resolve(entry.data);
           } else {
-            const error = currentState.errors.get(memberId);
+            const error = currentState.errors.get(cacheKey);
             reject(new Error(error || "Failed to load member detail"));
           }
         }
@@ -113,10 +124,10 @@ export async function loadMemberDetail(
   // Start loading
   memberDetailStore.update((state) => ({
     ...state,
-    loading: new Set(state.loading).add(memberId),
+    loading: new Set(state.loading).add(cacheKey),
     errors: (() => {
       const errors = new Map(state.errors);
-      errors.delete(memberId);
+      errors.delete(cacheKey);
       return errors;
     })(),
   }));
@@ -132,13 +143,13 @@ export async function loadMemberDetail(
     // Update cache
     memberDetailStore.update((state) => {
       const cache = new Map(state.cache);
-      cache.set(memberId, {
+      cache.set(cacheKey, {
         data: memberDetail,
         timestamp: Date.now(),
       });
 
       const loading = new Set(state.loading);
-      loading.delete(memberId);
+      loading.delete(cacheKey);
 
       return {
         ...state,
@@ -155,10 +166,10 @@ export async function loadMemberDetail(
     // Update error state
     memberDetailStore.update((state) => {
       const errors = new Map(state.errors);
-      errors.set(memberId, errorMessage);
+      errors.set(cacheKey, errorMessage);
 
       const loading = new Set(state.loading);
-      loading.delete(memberId);
+      loading.delete(cacheKey);
 
       return {
         ...state,
@@ -173,12 +184,26 @@ export async function loadMemberDetail(
 
 /**
  * Clears the cache for a specific member or all members
+ * @param memberId - Optional member ID to clear cache for
+ * @param season - Optional season to clear cache for (only used if memberId is provided)
  */
-export function clearMemberDetailCache(memberId?: number): void {
+export function clearMemberDetailCache(
+  memberId?: number,
+  season?: number,
+): void {
   if (memberId !== undefined) {
     memberDetailStore.update((state) => {
       const cache = new Map(state.cache);
-      cache.delete(memberId);
+      if (season !== undefined) {
+        // Clear specific season for member
+        cache.delete(getCacheKey(memberId, season));
+      } else {
+        // Clear all seasons for member
+        const keysToDelete = Array.from(cache.keys()).filter(
+          (key) => key.startsWith(`${memberId}-`) || key === `${memberId}`,
+        );
+        keysToDelete.forEach((key) => cache.delete(key));
+      }
       return { ...state, cache };
     });
   } else {

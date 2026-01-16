@@ -15,6 +15,7 @@
     import MembershipCard from "$lib/components/member-detail/membership-card.svelte";
     import RentedFacilitiesCard from "$lib/components/member-detail/rented-facilities-card.svelte";
     import MembershipHistoryCard from "$lib/components/member-detail/membership-history-card.svelte";
+    import WaitlistCard from "$lib/components/waitlist/waitlist-card.svelte";
     import RentFacilityDialog from "$lib/components/member-detail/rent-facility-dialog.svelte";
     import PaymentDialog from "$lib/components/member-detail/payment-dialog.svelte";
     import FreeFacilityDialog from "$lib/components/member-detail/free-facility-dialog.svelte";
@@ -47,17 +48,7 @@
     } from "$lib/data/repositories/facilities-by-type-repository";
     import type { Season } from "$model/shared/season";
     import type { RentedFacility } from "$model/facilities/rented-facility";
-    import {
-        CalendarDate,
-        getLocalTimeZone,
-        today,
-        toCalendarDate,
-    } from "@internationalized/date";
     import { formatDate } from "$model/shared/date-utils";
-    import {
-        rentFacility,
-        type RentFacilityRequest,
-    } from "$lib/data/api/facilities-api";
     import { getQueryParam, setQueryParam } from "$lib/utils/query-params";
 
     let { route } = $props();
@@ -85,20 +76,39 @@
         ) ?? null,
     );
 
-    let member = $derived(isValidId ? $memberDetail(memberId) : null);
+    let member = $derived(
+        isValidId
+            ? $memberDetail(memberId, parseInt(selectedSeasonValue))
+            : null,
+    );
     let memberLoading = $derived(
-        isValidId ? $isLoadingMemberDetail(memberId) : false,
+        isValidId
+            ? $isLoadingMemberDetail(memberId, parseInt(selectedSeasonValue))
+            : false,
     );
     let memberError = $derived(
-        !isValidId ? "ID membro non valido" : $memberDetailError(memberId),
+        !isValidId
+            ? "ID membro non valido"
+            : $memberDetailError(memberId, parseInt(selectedSeasonValue)),
     );
 
-    let facilities = $derived(isValidId ? $rentedFacilities(memberId) : []);
+    let facilities = $derived(
+        isValidId
+            ? $rentedFacilities(memberId, parseInt(selectedSeasonValue))
+            : [],
+    );
     let facilitiesLoading = $derived(
-        isValidId ? $isLoadingRentedFacilities(memberId) : false,
+        isValidId
+            ? $isLoadingRentedFacilities(
+                  memberId,
+                  parseInt(selectedSeasonValue),
+              )
+            : false,
     );
     let facilitiesError = $derived(
-        isValidId ? $rentedFacilitiesError(memberId) : null,
+        isValidId
+            ? $rentedFacilitiesError(memberId, parseInt(selectedSeasonValue))
+            : null,
     );
 
     // Combined loading and error states
@@ -130,7 +140,7 @@
         }
 
         try {
-            const season = selectedSeasonValue || undefined;
+            const season = parseInt(selectedSeasonValue) || undefined;
             await Promise.all([
                 loadMemberDetail(memberId, true, season),
                 loadRentedFacilities(memberId, true, season),
@@ -151,10 +161,20 @@
             }
         });
 
+        console.log("Season changed:", selectedSeason);
+
         if (selectedSeason) {
             Promise.all([
-                loadMemberDetail(memberId, false, selectedSeasonValue),
-                loadRentedFacilities(memberId, false, selectedSeasonValue),
+                loadMemberDetail(
+                    memberId,
+                    false,
+                    parseInt(selectedSeasonValue),
+                ),
+                loadRentedFacilities(
+                    memberId,
+                    false,
+                    parseInt(selectedSeasonValue),
+                ),
             ]).catch((error) => {
                 console.error("Failed to load data for season:", error);
             });
@@ -188,6 +208,7 @@
         if (!selectedRentedFacility) return;
 
         // TODO: Implement free facility logic here
+        // Also refresh the facilities by type
         console.log("Free facility:", {
             rentalId: selectedRentedFacility.id,
             facilityId: selectedRentedFacility.facilityId,
@@ -243,6 +264,16 @@
         rentDialogMode = "renew";
         renewFacilityToRenew = facility;
         isRentDialogOpen = true;
+    }
+
+    async function handleRentFacilitySuccess(
+        facilityTypeId: number,
+        seasonId: number,
+    ) {
+        await Promise.all([
+            loadRentedFacilities(memberId, true, seasonId),
+            loadFacilitiesByType(facilityTypeId, seasonId, true),
+        ]);
     }
 </script>
 
@@ -355,6 +386,16 @@
                     onRenew={openRenewMembershipDialog}
                     onSuccess={handleRefresh}
                 />
+
+                <!-- Waitlist Card -->
+                <WaitlistCard
+                    waitlistEntries={[]}
+                    onLeaveWaitlist={(entryId) => {
+                        console.log("Leave waitlist:", entryId);
+                        handleRefresh();
+                    }}
+                    loading={false}
+                />
             </div>
 
             <!-- Right Column: Facilities & History -->
@@ -394,9 +435,10 @@
         rentDialogMode = "rent";
         renewFacilityToRenew = null;
     }}
-    onSuccess={handleRefresh}
-    onLoadFacilitiesForType={(typeId) =>
-        loadFacilitiesByType(typeId, selectedSeason?.id ?? currentSeason.id)}
+    onSuccess={(facilityTypeId, seasonId) =>
+        handleRentFacilitySuccess(facilityTypeId, seasonId)}
+    onLoadFacilitiesForType={(typeId, seasonId) =>
+        loadFacilitiesByType(typeId, seasonId)}
 />
 
 <!-- Payment Dialog -->
@@ -407,7 +449,6 @@
     entityIdentifier={selectedRentedFacility?.facilityIdentifier || ""}
     price={selectedRentedFacility?.price}
     payment={selectedRentedFacility?.payment}
-    includeDateField={false}
     onClose={() => (isPaymentDialogOpen = false)}
     onSuccess={handleRefresh}
 />

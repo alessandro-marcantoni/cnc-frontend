@@ -30,7 +30,6 @@
         entityIdentifier: string;
         price?: number;
         payment?: BasePayment | null;
-        includeDateField?: boolean;
         onClose: () => void;
         onSuccess: () => void;
     }
@@ -42,7 +41,6 @@
         entityIdentifier,
         price,
         payment,
-        includeDateField = false,
         onClose,
         onSuccess,
     }: Props = $props();
@@ -84,9 +82,6 @@
 
     async function handleSubmit() {
         if (!entityId || !amount || !method) return;
-
-        // Validate date if required
-        if (includeDateField && !paymentDate) return;
 
         isSubmitting = true;
         error = null;
@@ -164,7 +159,6 @@
     // Compute form validity
     let isFormValid = $derived(() => {
         if (!amount || !method) return false;
-        if (includeDateField && !paymentDate) return false;
         return true;
     });
 </script>
@@ -212,21 +206,6 @@
                     </InputGroup.Addon>
                 </InputGroup.Root>
             </div>
-
-            <!-- Payment Date (optional, for memberships) -->
-            {#if includeDateField}
-                <div class="grid gap-2">
-                    <label class="text-sm font-medium" for="payment-date">
-                        Data Pagamento <span class="text-destructive">*</span>
-                    </label>
-                    <DatePicker
-                        id="payment-date"
-                        bind:value={paymentDate}
-                        placeholder="Seleziona data pagamento"
-                        disabled={isSubmitting || isDeleting}
-                    />
-                </div>
-            {/if}
 
             <!-- Payment Method -->
             <div class="grid gap-2">

@@ -1,12 +1,13 @@
 <script lang="ts">
     import * as Dialog from "$lib/components/ui/dialog";
     import * as Select from "$lib/components/ui/select";
+    import * as InputGroup from "$lib/components/ui/input-group";
     import * as Popover from "$lib/components/ui/popover";
     import * as Command from "$lib/components/ui/command";
-    import * as InputGroup from "$lib/components/ui/input-group";
     import { Button } from "$lib/components/ui/button";
     import { Label } from "$lib/components/ui/label";
-
+    import WaitlistAlert from "$lib/components/waitlist/waitlist-alert.svelte";
+    import JoinWaitlistDialog from "$lib/components/waitlist/join-waitlist-dialog.svelte";
     import {
         ChevronsUpDown,
         Check,
@@ -35,8 +36,8 @@
         availableSeasons: Season[];
         facilityToRenew?: RentedFacility | null;
         onClose: () => void;
-        onSuccess: () => void;
-        onLoadFacilitiesForType?: (typeId: number) => void;
+        onSuccess: (facilityTypeId: number, seasonId: number) => void;
+        onLoadFacilitiesForType?: (typeId: number, seasonId: number) => void;
     }
 
     let {
@@ -62,6 +63,7 @@
     let facilityTypeComboboxOpen = $state(false);
     let errorMessage = $state<string | null>(null);
     let isSubmitting = $state(false);
+    let joinWaitlistDialogOpen = $state(false);
 
     const isRenewMode = $derived(mode === "renew");
     const defaultSeason = $derived(currentSeason.name.toString());
@@ -113,10 +115,26 @@
         }
     });
 
-    // Load facilities when type is selected
+    // Load facilities when type or season is selected
     $effect(() => {
-        if (selectedFacilityType && onLoadFacilitiesForType) {
-            onLoadFacilitiesForType(selectedFacilityType);
+        if (selectedFacilityType && selectedSeason && onLoadFacilitiesForType) {
+            const selectedSeasonObj = availableSeasons.find(
+                (s) => s.name.toString() === selectedSeason,
+            );
+            if (selectedSeasonObj) {
+                onLoadFacilitiesForType(
+                    selectedFacilityType,
+                    selectedSeasonObj.id,
+                );
+            }
+        }
+    });
+
+    // Reset selected facility when season changes
+    $effect(() => {
+        if (selectedSeason && !isRenewMode) {
+            selectedFacilityId = null;
+            price = "";
         }
     });
 
@@ -140,6 +158,14 @@
             : null,
     );
 
+    const availableFacilitiesFiltered = $derived(
+        availableFacilities.filter((f) => !f.isRented),
+    );
+
+    const hasAvailableFacilities = $derived(
+        availableFacilitiesFiltered.length > 0,
+    );
+
     const suggestedPrice = $derived(
         isRenewMode && facilityToRenew
             ? (facilityTypes.find(
@@ -154,7 +180,8 @@
         selectedSeason &&
             price &&
             parseFloat(price) > 0 &&
-            (isRenewMode || selectedFacilityId !== null),
+            (isRenewMode ||
+                (selectedFacilityId !== null && hasAvailableFacilities)),
     );
 
     function handleClose() {
@@ -208,7 +235,12 @@
 
             // Success
             open = false;
-            onSuccess();
+            onSuccess(
+                availableFacilities.find(
+                    (facility) => facility.id === selectedFacilityId,
+                )!!.facilityTypeId,
+                selectedSeasonObj.id,
+            );
         } catch (error) {
             if (error instanceof Error) {
                 errorMessage = error.message;
@@ -390,8 +422,8 @@
                                     <Select.Label
                                         >Servizi Disponibili</Select.Label
                                     >
-                                    {#if availableFacilities.length > 0}
-                                        {#each availableFacilities.filter((f) => !f.isRented) as facility (facility.id)}
+                                    {#if hasAvailableFacilities}
+                                        {#each availableFacilitiesFiltered as facility (facility.id)}
                                             <Select.Item
                                                 value={facility.id.toString()}
                                             >
@@ -409,6 +441,17 @@
                             </Select.Content>
                         </Select.Root>
                     </div>
+
+                    <!-- Show waitlist alert if no facilities available -->
+                    {#if !hasAvailableFacilities && selectedFacilityTypeName}
+                        <WaitlistAlert
+                            facilityTypeName={selectedFacilityTypeName}
+                            waitlistCount={0}
+                            memberPosition={null}
+                            onJoinWaitlist={() =>
+                                (joinWaitlistDialogOpen = true)}
+                        />
+                    {/if}
                 {/if}
             {/if}
 
@@ -479,3 +522,17 @@
         </Dialog.Footer>
     </Dialog.Content>
 </Dialog.Root>
+
+<!-- Join Waitlist Dialog -->
+{#if selectedFacilityTypeName}
+    <JoinWaitlistDialog
+        bind:open={joinWaitlistDialogOpen}
+        facilityTypeName={selectedFacilityTypeName}
+        waitlistCount={0}
+        onClose={() => (joinWaitlistDialogOpen = false)}
+        onConfirm={(notes) => {
+            console.log("Join waitlist with notes:", notes);
+            joinWaitlistDialogOpen = false;
+        }}
+    />
+{/if}

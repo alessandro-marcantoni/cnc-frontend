@@ -179,11 +179,10 @@
     <PaymentDialog
         bind:open={paymentDialogOpen}
         entityType="membership"
-        entityId={currentMembership?.id || null}
+        entityId={currentMembership?.periodId || null}
         entityIdentifier="la tessera #{currentMembership?.number}"
         price={currentMembership?.price}
         payment={currentMembership?.payment}
-        includeDateField={true}
         onClose={() => (paymentDialogOpen = false)}
         {onSuccess}
     />

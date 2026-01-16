@@ -13,11 +13,11 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
  */
 export async function fetchMemberDetail(
   memberId: number,
-  season?: string,
+  season?: number,
 ): Promise<MemberDetail> {
   const url = new URL(`${API_BASE_URL}/api/v1.0/members/${memberId}`);
   if (season) {
-    url.searchParams.set("season", season);
+    url.searchParams.set("season", season.toString());
   }
 
   const response = await fetch(url.toString());
@@ -55,6 +55,7 @@ export async function fetchMemberDetail(
       status: membership.status,
       validFrom: parseDate(membership.validFrom),
       expiresAt: parseDate(membership.expiresAt),
+      periodId: membership.periodId,
       price: membership.price,
       payment: membership.payment
         ? {

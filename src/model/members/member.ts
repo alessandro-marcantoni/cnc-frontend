@@ -29,6 +29,7 @@ export type Membership = {
   status: MembershipStatus;
   validFrom: DateValue;
   expiresAt: DateValue;
+  periodId: number;
   price: number;
   payment: Payment | null;
 };

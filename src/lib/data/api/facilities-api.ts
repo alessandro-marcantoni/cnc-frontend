@@ -87,12 +87,12 @@ export async function fetchFacilitiesByType(
  */
 export async function fetchRentedFacilities(
   memberId: number,
-  season?: string,
+  season?: number,
 ): Promise<RentedFacility[]> {
   const url = new URL(`${API_BASE_URL}/api/v1.0/facilities/rented`);
   url.searchParams.set("member_id", memberId.toString());
   if (season) {
-    url.searchParams.set("season", season);
+    url.searchParams.set("season", season.toString());
   }
 
   const response = await fetch(url.toString());
