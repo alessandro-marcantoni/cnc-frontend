@@ -9,6 +9,7 @@
     import * as Popover from "$lib/components/ui/popover";
     import * as Command from "$lib/components/ui/command";
     import * as InputGroup from "$lib/components/ui/input-group";
+    import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
     import {
         ChevronUp,
         ChevronDown,
@@ -17,6 +18,8 @@
         ChevronsUpDown,
         Check,
         SquareArrowOutUpRight,
+        MoreVertical,
+        CalendarPlus,
     } from "@lucide/svelte";
     import type { FacilityWithStatus } from "$model/facilities/facility-with-status";
     import type { Member } from "$model/members/member";
@@ -287,10 +290,10 @@
                 <Table.Row>
                     <Table.Head>
                         <button
-                            class="flex items-center gap-1 font-medium hover:text-foreground"
                             onclick={() => handleSort("identifier")}
+                            class="flex items-center gap-1 hover:text-foreground transition-colors"
                         >
-                            Identificativo
+                            Identificatore
                             {#if isSortedAsc("identifier")}
                                 <ChevronUp class="h-4 w-4" />
                             {:else if isSortedDesc("identifier")}
@@ -300,8 +303,8 @@
                     </Table.Head>
                     <Table.Head>
                         <button
-                            class="flex items-center gap-1 font-medium hover:text-foreground"
                             onclick={() => handleSort("status")}
+                            class="flex items-center gap-1 hover:text-foreground transition-colors"
                         >
                             Stato
                             {#if isSortedAsc("status")}
@@ -313,10 +316,10 @@
                     </Table.Head>
                     <Table.Head>
                         <button
-                            class="flex items-center gap-1 font-medium hover:text-foreground"
                             onclick={() => handleSort("expiresAt")}
+                            class="flex items-center gap-1 hover:text-foreground transition-colors"
                         >
-                            Affittato da
+                            Affittato a
                             {#if isSortedAsc("expiresAt")}
                                 <ChevronUp class="h-4 w-4" />
                             {:else if isSortedDesc("expiresAt")}
@@ -324,7 +327,7 @@
                             {/if}
                         </button>
                     </Table.Head>
-                    <Table.Head class="text-right">Azioni</Table.Head>
+                    <Table.Head class="text-right w-20">Azioni</Table.Head>
                 </Table.Row>
             </Table.Header>
             <Table.Body>
@@ -349,37 +352,54 @@
                             </Table.Cell>
                             <Table.Cell>
                                 {#if facility.isRented && facility.rentedByMemberFirstName && facility.rentedByMemberLastName && facility.rentedByMemberId}
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        class="h-6 px-2 font-medium hover:bg-accent"
-                                        onclick={() =>
-                                            goto(
-                                                `/members/${facility.rentedByMemberId}`,
-                                            )}
-                                    >
-                                        <span class="mr-1.5">
-                                            {facility.rentedByMemberFirstName}
-                                            {facility.rentedByMemberLastName}
-                                        </span>
-                                        <SquareArrowOutUpRight
-                                            class="h-3.5 w-3.5 opacity-70"
-                                        />
-                                    </Button>
+                                    {facility.rentedByMemberFirstName}
+                                    {facility.rentedByMemberLastName}
                                 {:else}
-                                    <span class="text-muted-foreground">-</span>
+                                    <span class="text-muted-foreground">—</span>
                                 {/if}
                             </Table.Cell>
                             <Table.Cell class="text-right">
-                                {#if !facility.isRented}
-                                    <Button
-                                        class="h-6"
-                                        onclick={() =>
-                                            openBookingDialog(facility)}
+                                <DropdownMenu.Root>
+                                    <DropdownMenu.Trigger>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            class="h-8 w-8 p-0"
+                                        >
+                                            <MoreVertical class="h-4 w-4" />
+                                            <span class="sr-only">Azioni</span>
+                                        </Button>
+                                    </DropdownMenu.Trigger>
+                                    <DropdownMenu.Content
+                                        align="end"
+                                        class="w-48"
                                     >
-                                        Affitta
-                                    </Button>
-                                {/if}
+                                        <DropdownMenu.Label>
+                                            Azioni
+                                        </DropdownMenu.Label>
+                                        <DropdownMenu.Separator />
+                                        {#if facility.isRented && facility.rentedByMemberId}
+                                            <DropdownMenu.Item
+                                                onclick={() =>
+                                                    goto(
+                                                        `/members/${facility.rentedByMemberId}`,
+                                                    )}
+                                            >
+                                                Visualizza Dettagli Socio
+                                            </DropdownMenu.Item>
+                                        {:else}
+                                            <DropdownMenu.Item
+                                                onclick={() =>
+                                                    openBookingDialog(facility)}
+                                            >
+                                                <CalendarPlus
+                                                    class="mr-2 h-4 w-4"
+                                                />
+                                                Affitta Struttura
+                                            </DropdownMenu.Item>
+                                        {/if}
+                                    </DropdownMenu.Content>
+                                </DropdownMenu.Root>
                             </Table.Cell>
                         </Table.Row>
                     {/each}

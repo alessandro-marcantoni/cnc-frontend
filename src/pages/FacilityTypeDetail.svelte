@@ -17,7 +17,7 @@
         getSeasons,
         getCurrentSeason,
     } from "$lib/data/repositories/seasons-repository";
-    import { ArrowLeft, Layers, CircleAlert } from "@lucide/svelte";
+    import { ArrowLeft, Layers, CircleAlert, Clock } from "@lucide/svelte";
     import FacilitiesStats from "$lib/components/facilities/facilities-stats.svelte";
     import type { Season } from "$model/shared/season";
     import { getQueryParam, setQueryParam } from "$lib/utils/query-params";
@@ -88,6 +88,10 @@
 
     function goBack() {
         goto("/services");
+    }
+
+    function goToWaitlist() {
+        goto(`/services/${facilityTypeId}/waitlist`);
     }
 </script>
 
@@ -164,9 +168,7 @@
         <Card.Root class="border-dashed">
             <Card.Content class="py-24">
                 <div class="text-center">
-                    <div
-                        class="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4"
-                    >
+                    <div>
                         <Layers class="h-8 w-8 text-muted-foreground" />
                     </div>
                     <h3 class="text-lg font-semibold mb-2">
@@ -230,6 +232,10 @@
                             offerti dal Circolo Nautico Cattolica.</Card.Description
                         >
                     </div>
+                    <Button onclick={goToWaitlist} variant="outline">
+                        <Clock class="mr-2 h-4 w-4" />
+                        Lista d'Attesa
+                    </Button>
                 </div></Card.Header
             >
             <Card.Content>

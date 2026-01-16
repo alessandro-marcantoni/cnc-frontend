@@ -53,3 +53,16 @@ export {
   availableFacilities,
   rentedFacilitiesByType,
 } from "./facilities-by-type-repository";
+
+export {
+  loadWaitlist,
+  clearWaitlistCache,
+  clearAllWaitlistCaches,
+  removeMemberFromWaitlistCache,
+  addMemberToWaitlistCache,
+  waitlist,
+  isLoadingWaitlist,
+  waitlistError,
+  waitlistCacheAge,
+  waitlistCount,
+} from "./waitlist-repository";

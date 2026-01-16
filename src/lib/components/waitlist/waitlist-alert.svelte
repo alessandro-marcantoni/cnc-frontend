@@ -2,7 +2,7 @@
     import * as Alert from "$lib/components/ui/alert";
     import { Badge } from "$lib/components/ui/badge";
     import { Button } from "$lib/components/ui/button";
-    import { Clock, Users, AlertCircle } from "@lucide/svelte";
+    import { Clock, Users, CircleAlert } from "@lucide/svelte";
 
     interface Props {
         facilityTypeName: string;
@@ -24,14 +24,14 @@
 </script>
 
 <Alert.Root variant="default">
-    <AlertCircle />
+    <CircleAlert />
     <Alert.Title>
         Nessun {facilityTypeName} Disponibile
     </Alert.Title>
     <Alert.Description class="space-y-3">
         {#if isOnWaitlist}
             <p>
-                Il membro è già in lista d'attesa per questo tipo di struttura.
+                Il socio è già in lista d'attesa per questo tipo di struttura.
             </p>
             {#if waitlistCount > 0}
                 <div class="flex items-center gap-1 text-sm">
@@ -52,7 +52,7 @@
         {:else}
             <p>
                 Al momento non ci sono {facilityTypeName.toLowerCase()} disponibili.
-                Aggiungi il membro alla lista d'attesa?
+                Aggiungi il socio alla lista d'attesa?
             </p>
             <div class="flex items-center gap-4 flex-wrap">
                 <Button variant="default" size="sm" onclick={onJoinWaitlist}>

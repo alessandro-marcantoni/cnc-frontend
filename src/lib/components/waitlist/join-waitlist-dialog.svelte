@@ -1,11 +1,9 @@
 <script lang="ts">
     import * as Dialog from "$lib/components/ui/dialog";
     import * as Alert from "$lib/components/ui/alert";
-    import * as AlertDialog from "$lib/components/ui/alert-dialog";
     import { Button } from "$lib/components/ui/button";
     import { Textarea } from "$lib/components/ui/textarea";
-    import { Badge } from "$lib/components/ui/badge";
-    import { Clock, Users, AlertCircle } from "@lucide/svelte";
+    import { CircleAlert, Users } from "@lucide/svelte";
 
     interface Props {
         open: boolean;
@@ -52,7 +50,7 @@
         <Dialog.Header>
             <Dialog.Title>Aggiungi alla Lista d'Attesa</Dialog.Title>
             <Dialog.Description>
-                Aggiungi il membro alla lista d'attesa per <span
+                Aggiungi il socio alla lista d'attesa per <span
                     class="font-semibold">{facilityTypeName}</span
                 >
             </Dialog.Description>
@@ -73,9 +71,9 @@
                 </Alert.Root>
             {:else}
                 <Alert.Root>
-                    <AlertCircle />
+                    <CircleAlert />
                     <Alert.Description>
-                        Il membro sarà il primo in lista d'attesa.
+                        Il socio sarà il primo in lista d'attesa.
                     </Alert.Description>
                 </Alert.Root>
             {/if}

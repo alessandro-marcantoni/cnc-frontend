@@ -15,7 +15,6 @@
     import MembershipCard from "$lib/components/member-detail/membership-card.svelte";
     import RentedFacilitiesCard from "$lib/components/member-detail/rented-facilities-card.svelte";
     import MembershipHistoryCard from "$lib/components/member-detail/membership-history-card.svelte";
-    import WaitlistCard from "$lib/components/waitlist/waitlist-card.svelte";
     import RentFacilityDialog from "$lib/components/member-detail/rent-facility-dialog.svelte";
     import PaymentDialog from "$lib/components/member-detail/payment-dialog.svelte";
     import FreeFacilityDialog from "$lib/components/member-detail/free-facility-dialog.svelte";
@@ -88,7 +87,7 @@
     );
     let memberError = $derived(
         !isValidId
-            ? "ID membro non valido"
+            ? "ID socio non valido"
             : $memberDetailError(memberId, parseInt(selectedSeasonValue)),
     );
 
@@ -385,16 +384,6 @@
                         currentSeason.name.toString()}
                     onRenew={openRenewMembershipDialog}
                     onSuccess={handleRefresh}
-                />
-
-                <!-- Waitlist Card -->
-                <WaitlistCard
-                    waitlistEntries={[]}
-                    onLeaveWaitlist={(entryId) => {
-                        console.log("Leave waitlist:", entryId);
-                        handleRefresh();
-                    }}
-                    loading={false}
                 />
             </div>
 

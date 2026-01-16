@@ -14,3 +14,15 @@ export type {
   CreatePaymentRequest,
   UpdatePaymentRequest,
 } from "./payments-api";
+export {
+  fetchWaitlist,
+  fetchWaitlistWithDetails,
+  addToWaitlist,
+  removeFromWaitlist,
+} from "./waitlist-api";
+export type {
+  WaitlistEntry,
+  WaitlistResponse,
+  WaitlistMemberDetail,
+  AddToWaitlistRequest,
+} from "./waitlist-api";
