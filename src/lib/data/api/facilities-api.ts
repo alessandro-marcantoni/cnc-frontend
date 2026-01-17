@@ -20,6 +20,14 @@ export interface RentFacilityRequest {
   price: number;
 }
 
+export interface SuggestedPriceResponse {
+  suggestedPrice: number;
+  basePrice: number;
+  savingsAmount: number;
+  hasSpecialPrice: boolean;
+  applicableRules: number;
+}
+
 /**
  * Fetch facility catalog (all available facility types) from the API
  */
@@ -200,4 +208,24 @@ export async function rentFacility(
   };
 
   return rentedFacility;
+}
+
+/**
+ * Get suggested price for a facility type considering member's existing rentals and applicable discounts
+ */
+export async function getSuggestedPrice(
+  facilityTypeId: number,
+  memberId: number,
+  seasonId: number,
+): Promise<SuggestedPriceResponse> {
+  const url = `${API_BASE_URL}/api/v1.0/facilities/suggested-price?facility_type_id=${facilityTypeId}&member_id=${memberId}&season=${seasonId}`;
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`Failed to get suggested price: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data;
 }

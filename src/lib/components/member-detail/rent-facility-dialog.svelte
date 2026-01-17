@@ -4,8 +4,10 @@
     import * as InputGroup from "$lib/components/ui/input-group";
     import * as Popover from "$lib/components/ui/popover";
     import * as Command from "$lib/components/ui/command";
+    import * as Alert from "$lib/components/ui/alert";
     import { Button } from "$lib/components/ui/button";
     import { Label } from "$lib/components/ui/label";
+    import { Badge } from "$lib/components/ui/badge";
     import WaitlistAlert from "$lib/components/waitlist/waitlist-alert.svelte";
     import JoinWaitlistDialog from "$lib/components/waitlist/join-waitlist-dialog.svelte";
     import { addToWaitlist } from "$lib/data/api";
@@ -15,6 +17,7 @@
         AlertCircle,
         Loader2,
         RefreshCw,
+        Sparkles,
     } from "@lucide/svelte";
 
     import type { FacilityType } from "$model/facilities/facility-type";
@@ -24,6 +27,7 @@
     import {
         rentFacility,
         type RentFacilityRequest,
+        getSuggestedPrice,
     } from "$lib/data/api/facilities-api";
     import { loadWaitlist } from "$lib/data/repositories";
 
@@ -67,6 +71,11 @@
     let isSubmitting = $state(false);
     let joinWaitlistDialogOpen = $state(false);
     let isJoiningWaitlist = $state(false);
+    let isLoadingPrice = $state(false);
+    let priceInfo = $state<{
+        hasSpecialPrice: boolean;
+        savingsAmount: number;
+    } | null>(null);
 
     const isRenewMode = $derived(mode === "renew");
     const defaultSeason = $derived(currentSeason.name.toString());
@@ -84,12 +93,24 @@
                 selectedFacilityType = null;
                 selectedFacilityId = facilityToRenew.facilityId;
 
-                // Find facility type and set suggested price
+                // Find facility type and fetch suggested price from API
                 const facilityType = facilityTypes.find(
                     (ft) => ft.name === facilityToRenew.facilityName,
                 );
                 if (facilityType) {
-                    price = facilityType.suggestedPrice.toString();
+                    // Find the selected season object
+                    const selectedSeasonObj = availableSeasons.find(
+                        (s) => s.name.toString() === selectedSeason,
+                    );
+                    if (selectedSeasonObj) {
+                        fetchSuggestedPrice(
+                            facilityType.id,
+                            selectedSeasonObj.id,
+                        );
+                    } else {
+                        // Fallback to base price if season not found
+                        price = facilityType.suggestedPrice.toString();
+                    }
                 } else {
                     price = "";
                 }
@@ -102,21 +123,65 @@
         }
     });
 
-    // Auto-fill price when facility is selected in rent mode
+    // Auto-fill price and fetch suggested price when facility is selected in rent mode
     $effect(() => {
         if (
             !isRenewMode &&
             selectedFacilityId &&
-            availableFacilities.length > 0
+            availableFacilities.length > 0 &&
+            selectedSeason
         ) {
+            const facility = availableFacilities.find(
+                (f) => f.id === selectedFacilityId,
+            );
+            const selectedSeasonObj = availableSeasons.find(
+                (s) => s.name.toString() === selectedSeason,
+            );
+
+            if (facility && selectedSeasonObj && selectedFacilityType) {
+                fetchSuggestedPrice(selectedFacilityType, selectedSeasonObj.id);
+            }
+        }
+    });
+
+    async function fetchSuggestedPrice(
+        facilityTypeId: number,
+        seasonId: number,
+    ) {
+        isLoadingPrice = true;
+        priceInfo = null;
+
+        try {
+            const result = await getSuggestedPrice(
+                facilityTypeId,
+                memberId,
+                seasonId,
+            );
+
+            price = result.suggestedPrice.toFixed(2);
+
+            if (result.hasSpecialPrice) {
+                priceInfo = {
+                    hasSpecialPrice: true,
+                    savingsAmount: result.savingsAmount,
+                };
+            } else {
+                priceInfo = null;
+            }
+        } catch (error) {
+            console.error("Failed to calculate suggested price:", error);
+            // Fallback to base price
             const facility = availableFacilities.find(
                 (f) => f.id === selectedFacilityId,
             );
             if (facility) {
                 price = facility.suggestedPrice.toString();
             }
+            priceInfo = null;
+        } finally {
+            isLoadingPrice = false;
         }
-    });
+    }
 
     // Load facilities when type or season is selected
     $effect(() => {
@@ -133,11 +198,25 @@
         }
     });
 
-    // Reset selected facility when season changes
+    // Reset selected facility when season changes (rent mode) or refetch price (renew mode)
     $effect(() => {
-        if (selectedSeason && !isRenewMode) {
-            selectedFacilityId = null;
-            price = "";
+        if (selectedSeason) {
+            if (isRenewMode && facilityToRenew) {
+                // In renew mode, refetch the suggested price for the new season
+                const facilityType = facilityTypes.find(
+                    (ft) => ft.name === facilityToRenew.facilityName,
+                );
+                const selectedSeasonObj = availableSeasons.find(
+                    (s) => s.name.toString() === selectedSeason,
+                );
+                if (facilityType && selectedSeasonObj) {
+                    fetchSuggestedPrice(facilityType.id, selectedSeasonObj.id);
+                }
+            } else if (!isRenewMode) {
+                // In rent mode, reset selections
+                selectedFacilityId = null;
+                price = "";
+            }
         }
     });
 
@@ -479,9 +558,28 @@
                         <InputGroup.Text>EUR</InputGroup.Text>
                     </InputGroup.Addon>
                 </InputGroup.Root>
-                {#if suggestedPrice !== null}
+                {#if priceInfo?.hasSpecialPrice}
+                    <Alert.Root>
+                        <Sparkles class="h-4 w-4" />
+                        <Alert.Title class="flex items-center gap-2">
+                            <Badge variant="default">Prezzo Speciale</Badge>
+                        </Alert.Title>
+                        <Alert.Description>
+                            Risparmi €{priceInfo.savingsAmount.toFixed(2)} grazie
+                            ai tuoi altri servizi attivi.
+                        </Alert.Description>
+                    </Alert.Root>
+                {:else if suggestedPrice !== null && !isLoadingPrice}
                     <p class="text-xs text-muted-foreground">
                         Prezzo suggerito: €{suggestedPrice.toFixed(2)}
+                    </p>
+                {/if}
+                {#if isLoadingPrice}
+                    <p
+                        class="text-xs text-muted-foreground flex items-center gap-2"
+                    >
+                        <Loader2 class="h-3 w-3 animate-spin" />
+                        Calcolo del prezzo...
                     </p>
                 {/if}
             </div>
@@ -489,16 +587,11 @@
 
         <!-- Error Message -->
         {#if errorMessage}
-            <div
-                class="rounded-lg border border-destructive/50 bg-destructive/10 p-3"
-            >
-                <div class="flex items-start gap-2">
-                    <AlertCircle
-                        class="h-4 w-4 text-destructive mt-0.5 shrink-0"
-                    />
-                    <p class="text-sm text-destructive">{errorMessage}</p>
-                </div>
-            </div>
+            <Alert.Root variant="destructive">
+                <AlertCircle class="h-4 w-4" />
+                <Alert.Title>Errore</Alert.Title>
+                <Alert.Description>{errorMessage}</Alert.Description>
+            </Alert.Root>
         {/if}
 
         <Dialog.Footer>

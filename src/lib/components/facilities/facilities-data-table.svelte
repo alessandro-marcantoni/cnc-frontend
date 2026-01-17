@@ -9,6 +9,7 @@
     import * as Command from "$lib/components/ui/command";
     import * as InputGroup from "$lib/components/ui/input-group";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+    import * as Alert from "$lib/components/ui/alert";
     import {
         ChevronUp,
         ChevronDown,
@@ -28,7 +29,11 @@
         loadMembers,
     } from "$lib/data/repositories/members-repository";
     import { loadFacilitiesByType } from "$lib/data/repositories/facilities-by-type-repository";
-    import { rentFacility } from "$lib/data/api/facilities-api";
+    import {
+        rentFacility,
+        getSuggestedPrice,
+        type SuggestedPriceResponse,
+    } from "$lib/data/api/facilities-api";
     import { onMount } from "svelte";
     import { goto } from "@mateothegreat/svelte5-router";
     import type { RentFacilityRequest } from "$lib/data/api/facilities-api";
@@ -67,6 +72,8 @@
     let bookingPrice = $state("");
     let isSubmitting = $state(false);
     let submitError = $state<string | null>(null);
+    let suggestedPriceInfo = $state<SuggestedPriceResponse | null>(null);
+    let isLoadingSuggestedPrice = $state(false);
 
     // Combobox state
     let comboboxOpen = $state(false);
@@ -182,11 +189,35 @@
         selectedMemberId = "";
         comboboxOpen = false;
         submitError = null;
+        suggestedPriceInfo = null;
 
         // Set default price from facility
         bookingPrice = facility.suggestedPrice.toString();
 
         isDialogOpen = true;
+    }
+
+    async function fetchSuggestedPrice() {
+        if (!selectedFacility || !selectedMemberId) return;
+
+        isLoadingSuggestedPrice = true;
+        try {
+            const priceInfo = await getSuggestedPrice(
+                selectedFacility.facilityTypeId,
+                parseInt(selectedMemberId),
+                selectedSeasonId,
+            );
+            suggestedPriceInfo = priceInfo;
+            bookingPrice = priceInfo.suggestedPrice.toString();
+        } catch (error) {
+            console.error("Failed to fetch suggested price:", error);
+            // Fallback to base price
+            if (selectedFacility) {
+                bookingPrice = selectedFacility.suggestedPrice.toString();
+            }
+        } finally {
+            isLoadingSuggestedPrice = false;
+        }
     }
 
     async function handleBookingSubmit() {
@@ -478,6 +509,7 @@
                                             onSelect={() => {
                                                 selectedMemberId = option.value;
                                                 comboboxOpen = false;
+                                                fetchSuggestedPrice();
                                             }}
                                         >
                                             <Check
@@ -517,7 +549,53 @@
                         <InputGroup.Text>EUR</InputGroup.Text>
                     </InputGroup.Addon>
                 </InputGroup.Root>
-                {#if selectedFacility}
+                {#if isLoadingSuggestedPrice}
+                    <div
+                        class="flex items-center gap-2 text-xs text-muted-foreground"
+                    >
+                        <Loader2 class="h-3 w-3 animate-spin" />
+                        <span>Calcolo prezzo...</span>
+                    </div>
+                {:else if suggestedPriceInfo}
+                    {#if suggestedPriceInfo.hasSpecialPrice}
+                        <Alert.Root variant="default" class="py-2">
+                            <Alert.Description class="text-sm">
+                                <div
+                                    class="flex items-start justify-between gap-2"
+                                >
+                                    <div>
+                                        <p class="font-medium">
+                                            Prezzo speciale applicato!
+                                        </p>
+                                        <p
+                                            class="text-xs text-muted-foreground mt-1"
+                                        >
+                                            Prezzo base: €{suggestedPriceInfo.basePrice.toFixed(
+                                                2,
+                                            )}
+                                            • Risparmio: €{suggestedPriceInfo.savingsAmount.toFixed(
+                                                2,
+                                            )}
+                                        </p>
+                                    </div>
+                                    <Badge variant="secondary" class="shrink-0">
+                                        -{(
+                                            (suggestedPriceInfo.savingsAmount /
+                                                suggestedPriceInfo.basePrice) *
+                                            100
+                                        ).toFixed(0)}%
+                                    </Badge>
+                                </div>
+                            </Alert.Description>
+                        </Alert.Root>
+                    {:else}
+                        <p class="text-xs text-muted-foreground">
+                            Prezzo base: €{suggestedPriceInfo.basePrice.toFixed(
+                                2,
+                            )}
+                        </p>
+                    {/if}
+                {:else if selectedFacility}
                     <p class="text-xs text-muted-foreground">
                         Prezzo suggerito: €{selectedFacility.suggestedPrice.toFixed(
                             2,
@@ -525,6 +603,20 @@
                     </p>
                 {/if}
             </div>
+
+            {#if suggestedPriceInfo && suggestedPriceInfo.applicableRules > 0}
+                <Alert.Root variant="default">
+                    <AlertCircle class="h-4 w-4" />
+                    <Alert.Title>Regole di prezzo applicate</Alert.Title>
+                    <Alert.Description>
+                        {suggestedPriceInfo.applicableRules}
+                        {suggestedPriceInfo.applicableRules === 1
+                            ? "regola di prezzo è stata applicata"
+                            : "regole di prezzo sono state applicate"} per questo
+                        socio.
+                    </Alert.Description>
+                </Alert.Root>
+            {/if}
         </div>
 
         <!-- Error Message -->
