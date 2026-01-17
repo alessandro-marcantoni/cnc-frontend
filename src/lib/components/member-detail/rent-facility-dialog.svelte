@@ -8,6 +8,7 @@
     import { Label } from "$lib/components/ui/label";
     import WaitlistAlert from "$lib/components/waitlist/waitlist-alert.svelte";
     import JoinWaitlistDialog from "$lib/components/waitlist/join-waitlist-dialog.svelte";
+    import { addToWaitlist } from "$lib/data/api";
     import {
         ChevronsUpDown,
         Check,
@@ -24,6 +25,7 @@
         rentFacility,
         type RentFacilityRequest,
     } from "$lib/data/api/facilities-api";
+    import { loadWaitlist } from "$lib/data/repositories";
 
     interface Props {
         open: boolean;
@@ -64,6 +66,7 @@
     let errorMessage = $state<string | null>(null);
     let isSubmitting = $state(false);
     let joinWaitlistDialogOpen = $state(false);
+    let isJoiningWaitlist = $state(false);
 
     const isRenewMode = $derived(mode === "renew");
     const defaultSeason = $derived(currentSeason.name.toString());
@@ -530,9 +533,27 @@
         facilityTypeName={selectedFacilityTypeName}
         waitlistCount={0}
         onClose={() => (joinWaitlistDialogOpen = false)}
-        onConfirm={(notes) => {
-            console.log("Join waitlist with notes:", notes);
-            joinWaitlistDialogOpen = false;
+        onConfirm={async (notes) => {
+            if (!selectedFacilityType) return;
+
+            isJoiningWaitlist = true;
+            try {
+                await addToWaitlist({
+                    memberId,
+                    facilityTypeId: selectedFacilityType,
+                    notes: notes || undefined,
+                });
+                await loadWaitlist(selectedFacilityType, true);
+                joinWaitlistDialogOpen = false;
+                open = false;
+                // Optionally show success message or refresh data
+            } catch (error) {
+                console.error("Failed to add to waitlist:", error);
+                // Error is handled by the dialog component
+            } finally {
+                isJoiningWaitlist = false;
+            }
         }}
+        isSubmitting={isJoiningWaitlist}
     />
 {/if}

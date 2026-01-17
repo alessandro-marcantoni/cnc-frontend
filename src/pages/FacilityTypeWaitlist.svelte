@@ -132,6 +132,9 @@
                 selectedMember.memberId,
             );
 
+            // Refresh the waitlist to update positions
+            await refreshWaitlist();
+
             // Close dialog
             removeDialogOpen = false;
             selectedMember = null;

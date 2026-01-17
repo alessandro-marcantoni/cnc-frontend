@@ -19,18 +19,18 @@
         open = $bindable(),
         facilityTypeName,
         waitlistCount,
-        notes = "",
+        notes,
         onClose,
         onConfirm,
         isSubmitting = false,
     }: Props = $props();
 
-    let waitlistNotes = $state(notes);
+    let waitlistNotes = $state("");
 
     // Reset notes when dialog opens
     $effect(() => {
         if (open) {
-            waitlistNotes = notes;
+            waitlistNotes = notes || "";
         }
     });
 
