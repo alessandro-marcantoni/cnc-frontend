@@ -25,6 +25,9 @@
     }: Props = $props();
 
     let isOpen = $state(false);
+    let uniqueId = $state(
+        `multi-select-${Math.random().toString(36).substr(2, 9)}`,
+    );
 
     function toggleOption(value: string) {
         if (selected.includes(value)) {
@@ -44,7 +47,7 @@
 
     function handleClickOutside(event: MouseEvent) {
         const target = event.target as HTMLElement;
-        const container = document.getElementById("multi-select-container");
+        const container = document.getElementById(uniqueId);
         if (container && !container.contains(target)) {
             isOpen = false;
         }
@@ -60,7 +63,7 @@
     });
 </script>
 
-<div id="multi-select-container" class={cn("relative", className)}>
+<div id={uniqueId} class={cn("relative", className)}>
     <Button
         variant="outline"
         role="combobox"

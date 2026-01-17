@@ -29,7 +29,8 @@ export async function fetchMembers(season?: string): Promise<Member[]> {
     birthDate: parseDate(member.birthDate),
     membershipNumber: member.membershipNumber,
     membershipStatus: member.membershipStatus,
-    paid: member.paid,
+    membershipPaid: member.membershipPaid,
+    hasUnpaidFacilities: member.hasUnpaidFacilities,
   }));
 
   return members;

@@ -8,7 +8,8 @@ export type Member = {
   birthDate: DateValue;
   membershipNumber: number;
   membershipStatus: MembershipStatus;
-  paid: boolean;
+  membershipPaid: boolean;
+  hasUnpaidFacilities: boolean;
 };
 
 export type Address = {

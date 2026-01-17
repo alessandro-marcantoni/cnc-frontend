@@ -1,5 +1,4 @@
 import type { Member } from "$model/members/member";
-import { fetchMemberDetail } from "./member-detail-api";
 
 // Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
@@ -122,7 +121,6 @@ export async function removeFromWaitlist(
 /**
  * Fetch the waiting list with enriched member details
  * This function combines waitlist data with member information
- * Note: Fetches email from member detail API when needed
  */
 export async function fetchWaitlistWithDetails(
   facilityTypeId: number,
@@ -131,35 +129,19 @@ export async function fetchWaitlistWithDetails(
   const waitlistData = await fetchWaitlist(facilityTypeId);
 
   // Enrich waitlist entries with member details
-  const enrichedEntries: WaitlistMemberDetail[] = await Promise.all(
-    waitlistData.entries.map(async (entry, index) => {
+  const enrichedEntries: WaitlistMemberDetail[] = waitlistData.entries.map(
+    (entry, index) => {
       const member = members.find((m) => m.id === entry.memberId);
-
-      let memberEmail = "";
-
-      // Try to fetch member detail to get email if member exists
-      if (member) {
-        try {
-          const memberDetail = await fetchMemberDetail(entry.memberId);
-          memberEmail = memberDetail.email;
-        } catch (error) {
-          console.warn(
-            `Failed to fetch email for member ${entry.memberId}`,
-            error,
-          );
-          memberEmail = "";
-        }
-      }
 
       return {
         ...entry,
         memberName: member
           ? `${member.firstName} ${member.lastName}`
           : "Unknown Member",
-        memberEmail,
+        memberEmail: "",
         position: index + 1,
       };
-    }),
+    },
   );
 
   return enrichedEntries;

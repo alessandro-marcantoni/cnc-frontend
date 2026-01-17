@@ -29,7 +29,8 @@
 
     // State
     let searchQuery = $state("");
-    let paymentFilter = $state<PaymentStatus[]>(["PAID", "UNPAID"]);
+    let membershipPaymentFilter = $state<PaymentStatus[]>(["PAID", "UNPAID"]);
+    let facilitiesPaymentFilter = $state<PaymentStatus[]>(["PAID", "UNPAID"]);
     let sortColumn = $state<string | null>(null);
     let sortDirection = $state<"asc" | "desc">("asc");
     let currentPage = $state(0);
@@ -50,9 +51,12 @@
         }
     }
 
-    // Get payment status from member
-    function getPaymentStatus(member: Member): PaymentStatus {
-        return member.paid ? "PAID" : "UNPAID";
+    function getMembershipPaymentStatus(member: Member): PaymentStatus {
+        return member.membershipPaid ? "PAID" : "UNPAID";
+    }
+
+    function getFacilitiesPaymentStatus(member: Member): PaymentStatus {
+        return member.hasUnpaidFacilities ? "UNPAID" : "PAID";
     }
 
     // Filter members
@@ -69,9 +73,18 @@
             });
         }
 
-        // Filter by payment status
+        // Filter by membership payment status
         filtered = filtered.filter((member) =>
-            paymentFilter.includes(getPaymentStatus(member)),
+            membershipPaymentFilter.includes(
+                getMembershipPaymentStatus(member),
+            ),
+        );
+
+        // Filter by facilities payment status
+        filtered = filtered.filter((member) =>
+            facilitiesPaymentFilter.includes(
+                getFacilitiesPaymentStatus(member),
+            ),
         );
 
         // Sort
@@ -93,9 +106,9 @@
                         aVal = a.birthDate.toDate(getLocalTimeZone()).getTime();
                         bVal = b.birthDate.toDate(getLocalTimeZone()).getTime();
                         break;
-                    case "paymentStatus":
-                        aVal = getPaymentStatus(a);
-                        bVal = getPaymentStatus(b);
+                    case "membershipPaymentStatus":
+                        aVal = getMembershipPaymentStatus(a);
+                        bVal = getMembershipPaymentStatus(b);
                         break;
                     default:
                         return 0;
@@ -169,7 +182,8 @@
     // Reset to first page when search query or payment filter changes
     $effect(() => {
         searchQuery;
-        paymentFilter;
+        membershipPaymentFilter;
+        facilitiesPaymentFilter;
         currentPage = 0;
     });
 </script>
@@ -186,19 +200,35 @@
                 class="w-full"
             />
         </div>
-        <div class="flex items-center gap-2">
-            <label
-                for="payment-filter"
-                class="text-sm font-medium text-muted-foreground"
-            >
-                Pagamento:
-            </label>
-            <MultiSelect
-                options={paymentStatusOptions}
-                bind:selected={paymentFilter}
-                placeholder="Seleziona stato..."
-                class="w-70"
-            />
+        <div class="flex gap-3">
+            <div class="flex items-center gap-2">
+                <label
+                    for="membership-payment-filter"
+                    class="text-sm font-medium text-muted-foreground"
+                >
+                    Tessera:
+                </label>
+                <MultiSelect
+                    options={[...paymentStatusOptions]}
+                    bind:selected={membershipPaymentFilter}
+                    placeholder="Seleziona stato..."
+                    class="w-60"
+                />
+            </div>
+            <div class="flex items-center gap-2">
+                <label
+                    for="payment-filter"
+                    class="text-sm font-medium text-muted-foreground"
+                >
+                    Servizi:
+                </label>
+                <MultiSelect
+                    options={paymentStatusOptions}
+                    bind:selected={facilitiesPaymentFilter}
+                    placeholder="Seleziona stato..."
+                    class="w-60"
+                />
+            </div>
         </div>
     </div>
 
@@ -249,12 +279,27 @@
                     <Table.Head>
                         <button
                             class="flex items-center gap-1 font-medium hover:text-foreground"
-                            onclick={() => handleSort("paymentStatus")}
+                            onclick={() =>
+                                handleSort("membershipPaymentStatus")}
                         >
                             Pagamento Tessera
-                            {#if isSortedAsc("paymentStatus")}
+                            {#if isSortedAsc("membershipPaymentStatus")}
                                 <ChevronUp class="h-4 w-4" />
-                            {:else if isSortedDesc("paymentStatus")}
+                            {:else if isSortedDesc("membershipPaymentStatus")}
+                                <ChevronDown class="h-4 w-4" />
+                            {/if}
+                        </button>
+                    </Table.Head>
+                    <Table.Head>
+                        <button
+                            class="flex items-center gap-1 font-medium hover:text-foreground"
+                            onclick={() =>
+                                handleSort("facilitiesPaymentStatus")}
+                        >
+                            Pagamento Servizi
+                            {#if isSortedAsc("facilitiesPaymentStatus")}
+                                <ChevronUp class="h-4 w-4" />
+                            {:else if isSortedDesc("facilitiesPaymentStatus")}
                                 <ChevronDown class="h-4 w-4" />
                             {/if}
                         </button>
@@ -281,10 +326,23 @@
                             <Table.Cell>
                                 <Badge
                                     variant={getPaymentBadgeVariant(
-                                        getPaymentStatus(member),
+                                        getMembershipPaymentStatus(member),
                                     )}
                                 >
-                                    {getPaymentLabel(getPaymentStatus(member))}
+                                    {getPaymentLabel(
+                                        getMembershipPaymentStatus(member),
+                                    )}
+                                </Badge>
+                            </Table.Cell>
+                            <Table.Cell>
+                                <Badge
+                                    variant={getPaymentBadgeVariant(
+                                        getFacilitiesPaymentStatus(member),
+                                    )}
+                                >
+                                    {getPaymentLabel(
+                                        getFacilitiesPaymentStatus(member),
+                                    )}
                                 </Badge>
                             </Table.Cell>
                         </Table.Row>
