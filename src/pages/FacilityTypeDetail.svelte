@@ -239,7 +239,10 @@
                 </div></Card.Header
             >
             <Card.Content>
-                <FacilitiesDataTable data={$facilitiesByType} />
+                <FacilitiesDataTable
+                    data={$facilitiesByType}
+                    selectedSeasonId={parseInt(selectedSeasonValue)}
+                />
             </Card.Content>
         </Card.Root>
 

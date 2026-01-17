@@ -45,14 +45,14 @@
     let waitlistMembers = $derived(isValidId ? $waitlistStore : []);
     let loading = $derived(isValidId ? $loadingStore : false);
     let error = $derived(
-        !isValidId ? "ID tipo struttura non valido" : $errorStore,
+        !isValidId ? "ID tipo servizio non valido" : $errorStore,
     );
 
     let catalog = $derived($facilitiesCatalog);
     let facilityType = $derived(
         catalog.find((f) => f.id === facilityTypeId) || null,
     );
-    let facilityTypeName = $derived(facilityType?.name || "Tipo Struttura");
+    let facilityTypeName = $derived(facilityType?.name || "Tipo Servizio");
 
     // Local state
     let searchQuery = $state("");
@@ -222,7 +222,7 @@
                         Lista d'Attesa: {facilityTypeName}
                     </h1>
                     <p class="text-lg text-muted-foreground">
-                        Gestisci la lista d'attesa per questo tipo di struttura
+                        Gestisci la lista d'attesa per questo tipo di servizio
                     </p>
                 </div>
                 <Button onclick={refreshWaitlist} variant="outline">
@@ -318,7 +318,7 @@
                         <p class="text-muted-foreground max-w-sm mx-auto">
                             {searchQuery
                                 ? "Non ci sono soci che corrispondono alla tua ricerca."
-                                : "Non ci sono soci attualmente in lista d'attesa per questo tipo di struttura."}
+                                : "Non ci sono soci attualmente in lista d'attesa per questo tipo di servizio."}
                         </p>
                         {#if searchQuery}
                             <Button

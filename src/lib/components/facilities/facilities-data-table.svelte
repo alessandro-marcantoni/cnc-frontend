@@ -4,7 +4,6 @@
     import { Badge, type BadgeVariant } from "$lib/components/ui/badge";
     import { Input } from "$lib/components/ui/input";
     import MultiSelect from "$lib/components/ui/multi-select.svelte";
-    import DatePicker from "$lib/components/ui/date-picker.svelte";
     import * as Dialog from "$lib/components/ui/dialog";
     import * as Popover from "$lib/components/ui/popover";
     import * as Command from "$lib/components/ui/command";
@@ -17,9 +16,10 @@
         CircleX,
         ChevronsUpDown,
         Check,
-        SquareArrowOutUpRight,
         MoreVertical,
         CalendarPlus,
+        AlertCircle,
+        Loader2,
     } from "@lucide/svelte";
     import type { FacilityWithStatus } from "$model/facilities/facility-with-status";
     import type { Member } from "$model/members/member";
@@ -27,15 +27,11 @@
         members,
         loadMembers,
     } from "$lib/data/repositories/members-repository";
-    import { getCurrentSeason } from "$lib/data/repositories/seasons-repository";
+    import { loadFacilitiesByType } from "$lib/data/repositories/facilities-by-type-repository";
+    import { rentFacility } from "$lib/data/api/facilities-api";
     import { onMount } from "svelte";
     import { goto } from "@mateothegreat/svelte5-router";
-    import {
-        CalendarDate,
-        getLocalTimeZone,
-        toCalendarDate,
-        today,
-    } from "@internationalized/date";
+    import type { RentFacilityRequest } from "$lib/data/api/facilities-api";
 
     type FacilityStatus = "AVAILABLE" | "RENTED";
 
@@ -51,9 +47,10 @@
     // Props
     interface Props {
         data: FacilityWithStatus[];
+        selectedSeasonId: number;
     }
 
-    let { data }: Props = $props();
+    let { data, selectedSeasonId }: Props = $props();
 
     // State
     let searchQuery = $state("");
@@ -66,11 +63,10 @@
     // Dialog state
     let isDialogOpen = $state(false);
     let selectedFacility = $state<FacilityWithStatus | null>(null);
-    let selectedMemberId = $state<string>("");
-    let isWholeSeason = $state(true);
-    let bookingStartDate: CalendarDate | undefined = $state(undefined);
-    let bookingEndDate: CalendarDate | undefined = $state(undefined);
+    let selectedMemberId = $state<string | null>(null);
     let bookingPrice = $state("");
+    let isSubmitting = $state(false);
+    let submitError = $state<string | null>(null);
 
     // Combobox state
     let comboboxOpen = $state(false);
@@ -79,14 +75,6 @@
     onMount(() => {
         loadMembers();
     });
-
-    // Helper function to format date for input[type="date"]
-    function formatDateForInput(date: Date): string {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const day = String(date.getDate()).padStart(2, "0");
-        return `${year}-${month}-${day}`;
-    }
 
     // Get facility status
     function getFacilityStatus(facility: FacilityWithStatus): FacilityStatus {
@@ -193,15 +181,7 @@
         selectedFacility = facility;
         selectedMemberId = "";
         comboboxOpen = false;
-        isWholeSeason = true;
-
-        // Set default dates
-        const currentSeason = getCurrentSeason();
-
-        bookingStartDate = today(getLocalTimeZone());
-        bookingEndDate = currentSeason
-            ? toCalendarDate(currentSeason.endsAt)
-            : undefined;
+        submitError = null;
 
         // Set default price from facility
         bookingPrice = facility.suggestedPrice.toString();
@@ -209,41 +189,47 @@
         isDialogOpen = true;
     }
 
-    // Update dates when season toggle changes
-    $effect(() => {
-        if (isDialogOpen && selectedFacility) {
-            if (isWholeSeason) {
-                const currentSeason = getCurrentSeason();
-                if (currentSeason) {
-                    bookingStartDate = toCalendarDate(currentSeason.startsAt);
-                    bookingEndDate = toCalendarDate(currentSeason.endsAt);
-                }
-            } else {
-                const currentSeason = getCurrentSeason();
-                bookingStartDate = today(getLocalTimeZone());
-                bookingEndDate = currentSeason
-                    ? toCalendarDate(currentSeason.endsAt)
-                    : undefined;
-            }
-        }
-    });
-
-    function handleBookingSubmit() {
+    async function handleBookingSubmit() {
         if (!selectedFacility || !selectedMemberId) return;
 
-        // TODO: Implement booking logic here
-        console.log("Booking facility:", {
-            facilityId: selectedFacility.id,
-            identifier: selectedFacility.identifier,
-            memberId: selectedMemberId,
-            isWholeSeason,
-            startDate: bookingStartDate,
-            endDate: bookingEndDate,
-            price: parseFloat(bookingPrice),
-        });
+        isSubmitting = true;
+        submitError = null;
 
-        // Close dialog
-        isDialogOpen = false;
+        const rentFacilityRequest: RentFacilityRequest = {
+            memberId: parseInt(selectedMemberId),
+            facilityId: selectedFacility.id,
+            seasonId: selectedSeasonId,
+            price: parseFloat(bookingPrice),
+        };
+
+        try {
+            // Call API to rent the facility
+            await rentFacility(rentFacilityRequest);
+
+            // Refresh facilities list to show updated status
+            await loadFacilitiesByType(
+                selectedFacility.facilityTypeId,
+                selectedSeasonId,
+                true, // force refresh
+            );
+
+            // Close dialog on success
+            isDialogOpen = false;
+
+            // Reset dialog state
+            selectedFacility = null;
+            selectedMemberId = null;
+            bookingPrice = "";
+        } catch (error) {
+            // Handle error
+            submitError =
+                error instanceof Error
+                    ? error.message
+                    : "Errore durante la prenotazione del servizio";
+            console.error("Failed to rent facility:", error);
+        } finally {
+            isSubmitting = false;
+        }
     }
 
     // Computed list of member options for the select
@@ -395,7 +381,7 @@
                                                 <CalendarPlus
                                                     class="mr-2 h-4 w-4"
                                                 />
-                                                Affitta Struttura
+                                                Affitta Servizio
                                             </DropdownMenu.Item>
                                         {/if}
                                     </DropdownMenu.Content>
@@ -406,7 +392,7 @@
                 {:else}
                     <Table.Row>
                         <Table.Cell colspan={4} class="h-24 text-center">
-                            Nessuna struttura trovata con i filtri selezionati.
+                            Nessun servizio trovato con i filtri selezionati.
                         </Table.Cell>
                     </Table.Row>
                 {/if}
@@ -422,7 +408,7 @@
                 : 0}-{Math.min(
                 (currentPage + 1) * pageSize,
                 filteredFacilities.length,
-            )} di {filteredFacilities.length} struttura/e
+            )} di {filteredFacilities.length} servizi
         </div>
         <div class="flex items-center gap-2">
             <Button
@@ -452,9 +438,9 @@
 <Dialog.Root bind:open={isDialogOpen}>
     <Dialog.Content class="sm:max-w-125">
         <Dialog.Header>
-            <Dialog.Title>Affitta Struttura</Dialog.Title>
+            <Dialog.Title>Affitta Servizio</Dialog.Title>
             <Dialog.Description>
-                Inserisci i dettagli per affittare la struttura {selectedFacility?.identifier}
+                Inserisci i dettagli per affittare il servizio {selectedFacility?.identifier}
             </Dialog.Description>
         </Dialog.Header>
 
@@ -510,62 +496,6 @@
                 </Popover.Root>
             </div>
 
-            <!-- Season Toggle -->
-            <div class="grid gap-2">
-                <label class="text-sm font-medium" for="season-toggle"
-                    >Periodo</label
-                >
-                <div class="flex gap-2">
-                    <Button
-                        variant={isWholeSeason ? "default" : "outline"}
-                        size="sm"
-                        class="flex-1"
-                        onclick={() => (isWholeSeason = true)}
-                        type="button"
-                    >
-                        Intera Stagione
-                    </Button>
-                    <Button
-                        variant={!isWholeSeason ? "default" : "outline"}
-                        size="sm"
-                        class="flex-1"
-                        onclick={() => (isWholeSeason = false)}
-                        type="button"
-                    >
-                        Date Personalizzate
-                    </Button>
-                </div>
-            </div>
-
-            <!-- Date Inputs -->
-            <div class="grid grid-cols-2 gap-4">
-                <!-- Start Date -->
-                <div class="grid gap-2">
-                    <label class="text-sm font-medium" for="start-date">
-                        Data Inizio <span class="text-destructive">*</span>
-                    </label>
-                    <DatePicker
-                        id="start-date"
-                        bind:value={bookingStartDate}
-                        disabled={isWholeSeason}
-                        placeholder="Seleziona data inizio"
-                    />
-                </div>
-
-                <!-- End Date -->
-                <div class="grid gap-2">
-                    <label class="text-sm font-medium" for="end-date">
-                        Data Fine <span class="text-destructive">*</span>
-                    </label>
-                    <DatePicker
-                        id="end-date"
-                        bind:value={bookingEndDate}
-                        disabled={isWholeSeason}
-                        placeholder="Seleziona data fine"
-                    />
-                </div>
-            </div>
-
             <!-- Price Input -->
             <div class="grid gap-2">
                 <label for="price" class="text-sm font-medium">
@@ -597,18 +527,40 @@
             </div>
         </div>
 
+        <!-- Error Message -->
+        {#if submitError}
+            <div
+                class="rounded-lg border border-destructive/50 bg-destructive/10 p-4"
+            >
+                <div class="flex items-start gap-2">
+                    <AlertCircle
+                        class="h-5 w-5 text-destructive shrink-0 mt-0.5"
+                    />
+                    <p class="text-sm text-destructive">
+                        {submitError}
+                    </p>
+                </div>
+            </div>
+        {/if}
+
         <Dialog.Footer>
-            <Button variant="outline" onclick={() => (isDialogOpen = false)}>
+            <Button
+                variant="outline"
+                onclick={() => (isDialogOpen = false)}
+                disabled={isSubmitting}
+            >
                 Annulla
             </Button>
             <Button
                 onclick={handleBookingSubmit}
-                disabled={!selectedMemberId ||
-                    !bookingStartDate ||
-                    !bookingEndDate ||
-                    !bookingPrice}
+                disabled={!selectedMemberId || !bookingPrice || isSubmitting}
             >
-                Conferma Affitto
+                {#if isSubmitting}
+                    <Loader2 class="mr-2 h-4 w-4 animate-spin" />
+                    Affitto in corso...
+                {:else}
+                    Conferma Affitto
+                {/if}
             </Button>
         </Dialog.Footer>
     </Dialog.Content>

@@ -48,8 +48,7 @@
     <div class="mb-8">
         <h2 class="text-3xl font-bold tracking-tight">Servizi</h2>
         <p class="text-muted-foreground mt-2">
-            Esplora i servizi e le strutture disponibili presso il Circolo
-            Nautico Cattolica
+            Servizi disponibili presso il Circolo Nautico Cattolica
         </p>
     </div>
 

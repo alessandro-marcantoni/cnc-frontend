@@ -30,9 +30,7 @@
     </Alert.Title>
     <Alert.Description class="space-y-3">
         {#if isOnWaitlist}
-            <p>
-                Il socio è già in lista d'attesa per questo tipo di struttura.
-            </p>
+            <p>Il socio è già in lista d'attesa per questo tipo di servizio.</p>
             {#if waitlistCount > 0}
                 <div class="flex items-center gap-1 text-sm">
                     <Users class="h-3 w-3" />

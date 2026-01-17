@@ -290,7 +290,7 @@
                                                             <UserCheck
                                                                 class="h-4 w-4 mr-2"
                                                             />
-                                                            Assegna Struttura
+                                                            Assegna Servizio
                                                         </DropdownMenu.Item>
                                                         <DropdownMenu.Item
                                                             onclick={() =>

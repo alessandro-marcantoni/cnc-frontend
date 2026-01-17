@@ -25,7 +25,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-muted-foreground mb-1">
-                        Totale Strutture
+                        Totale Servizi
                     </p>
                     <p class="text-3xl font-bold">
                         {$facilitiesByType.length}
