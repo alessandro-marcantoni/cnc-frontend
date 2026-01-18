@@ -6,9 +6,7 @@ import {
   parseAbsolute,
   parseDate,
 } from "@internationalized/date";
-
-// Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+import { apiFetch } from "$lib/api-client";
 
 export interface AddMembershipRequest {
   memberId: number;
@@ -69,9 +67,7 @@ export async function addMembership(
     price,
   };
 
-  const url = `${API_BASE_URL}/api/v1.0/memberships`;
-
-  const response = await fetch(url, {
+  const response = await apiFetch("/api/v1.0/memberships", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -118,6 +114,7 @@ export async function addMembership(
       status: membership.status as MembershipStatus,
       validFrom: parseDate(membership.validFrom),
       expiresAt: parseDate(membership.expiresAt),
+      periodId: membership.id,
       price: membership.price,
       payment: membership.payment
         ? {

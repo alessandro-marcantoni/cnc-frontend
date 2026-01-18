@@ -1,11 +1,6 @@
 import type { Payment } from "$model/payments/payment";
-import {
-  getLocalTimeZone,
-  parseAbsolute,
-} from "@internationalized/date";
-
-// Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+import { getLocalTimeZone, parseAbsolute } from "@internationalized/date";
+import { apiFetch } from "$lib/api-client";
 
 export interface CreatePaymentRequest {
   membershipPeriodId?: number | null;
@@ -35,9 +30,7 @@ export interface CreatePaymentResponse {
 export async function createPayment(
   request: CreatePaymentRequest,
 ): Promise<CreatePaymentResponse> {
-  const url = `${API_BASE_URL}/api/v1.0/payments`;
-
-  const response = await fetch(url, {
+  const response = await apiFetch("/api/v1.0/payments", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -73,9 +66,7 @@ export async function updatePayment(
   paymentId: number,
   request: UpdatePaymentRequest,
 ): Promise<{ success: boolean }> {
-  const url = `${API_BASE_URL}/api/v1.0/payments/${paymentId}`;
-
-  const response = await fetch(url, {
+  const response = await apiFetch(`/api/v1.0/payments/${paymentId}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -109,9 +100,7 @@ export async function updatePayment(
 export async function deletePayment(
   paymentId: number,
 ): Promise<{ success: boolean }> {
-  const url = `${API_BASE_URL}/api/v1.0/payments/${paymentId}`;
-
-  const response = await fetch(url, {
+  const response = await apiFetch(`/api/v1.0/payments/${paymentId}`, {
     method: "DELETE",
   });
 

@@ -9,9 +9,7 @@ import {
   parseAbsolute,
   parseDate,
 } from "@internationalized/date";
-
-// Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+import { apiFetch } from "$lib/api-client";
 
 export interface RentFacilityRequest {
   memberId: number;
@@ -32,7 +30,7 @@ export interface SuggestedPriceResponse {
  * Fetch facility catalog (all available facility types) from the API
  */
 export async function fetchFacilitiesCatalog(): Promise<FacilityType[]> {
-  const response = await fetch(`${API_BASE_URL}/api/v1.0/facilities/catalog`);
+  const response = await apiFetch("/api/v1.0/facilities/catalog");
 
   if (!response.ok) {
     throw new Error(
@@ -60,8 +58,8 @@ export async function fetchFacilitiesByType(
   facilityTypeId: number,
   seasonId: number,
 ): Promise<FacilityWithStatus[]> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/v1.0/facilities?facility_type_id=${facilityTypeId}&season=${seasonId}`,
+  const response = await apiFetch(
+    `/api/v1.0/facilities?facility_type_id=${facilityTypeId}&season=${seasonId}`,
   );
 
   if (!response.ok) {
@@ -97,13 +95,11 @@ export async function fetchRentedFacilities(
   memberId: number,
   season?: number,
 ): Promise<RentedFacility[]> {
-  const url = new URL(`${API_BASE_URL}/api/v1.0/facilities/rented`);
-  url.searchParams.set("member_id", memberId.toString());
-  if (season) {
-    url.searchParams.set("season", season.toString());
-  }
+  const url = season
+    ? `/api/v1.0/facilities/rented?member_id=${memberId}&season=${season}`
+    : `/api/v1.0/facilities/rented?member_id=${memberId}`;
 
-  const response = await fetch(url.toString());
+  const response = await apiFetch(url);
 
   if (!response.ok) {
     throw new Error(
@@ -153,9 +149,7 @@ export async function fetchRentedFacilities(
 export async function rentFacility(
   request: RentFacilityRequest,
 ): Promise<RentedFacility> {
-  const url = `${API_BASE_URL}/api/v1.0/facilities/rented`;
-
-  const response = await fetch(url, {
+  const response = await apiFetch("/api/v1.0/facilities/rented", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -218,9 +212,9 @@ export async function getSuggestedPrice(
   memberId: number,
   seasonId: number,
 ): Promise<SuggestedPriceResponse> {
-  const url = `${API_BASE_URL}/api/v1.0/facilities/suggested-price?facility_type_id=${facilityTypeId}&member_id=${memberId}&season=${seasonId}`;
-
-  const response = await fetch(url);
+  const response = await apiFetch(
+    `/api/v1.0/facilities/suggested-price?facility_type_id=${facilityTypeId}&member_id=${memberId}&season=${seasonId}`,
+  );
 
   if (!response.ok) {
     throw new Error(`Failed to get suggested price: ${response.statusText}`);

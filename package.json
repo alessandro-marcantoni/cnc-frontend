@@ -35,6 +35,7 @@
 	},
 	"dependencies": {
 		"@mateothegreat/svelte5-router": "^2.16.19",
+		"better-auth": "^1.4.15",
 		"mode-watcher": "^1.1.0"
 	}
 }

@@ -1,7 +1,5 @@
 import type { Member } from "$model/members/member";
-
-// Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+import { apiFetch } from "$lib/api-client";
 
 export interface WaitlistEntry {
   id: number;
@@ -34,9 +32,9 @@ export interface AddToWaitlistRequest {
 export async function fetchWaitlist(
   facilityTypeId: number,
 ): Promise<WaitlistResponse> {
-  const url = `${API_BASE_URL}/api/v1.0/facilities/waiting-list?facility_type_id=${facilityTypeId}`;
+  const url = `/api/v1.0/facilities/waiting-list?facility_type_id=${facilityTypeId}`;
 
-  const response = await fetch(url);
+  const response = await apiFetch(url);
 
   if (!response.ok) {
     if (response.status === 404) {
@@ -59,9 +57,7 @@ export async function fetchWaitlist(
 export async function addToWaitlist(
   request: AddToWaitlistRequest,
 ): Promise<WaitlistEntry> {
-  const url = `${API_BASE_URL}/api/v1.0/facilities/waiting-list`;
-
-  const response = await fetch(url, {
+  const response = await apiFetch("/api/v1.0/facilities/waiting-list", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -94,9 +90,9 @@ export async function removeFromWaitlist(
   memberId: number,
   facilityTypeId: number,
 ): Promise<WaitlistEntry> {
-  const url = `${API_BASE_URL}/api/v1.0/facilities/waiting-list?member_id=${memberId}&facility_type_id=${facilityTypeId}`;
+  const url = `/api/v1.0/facilities/waiting-list?member_id=${memberId}&facility_type_id=${facilityTypeId}`;
 
-  const response = await fetch(url, {
+  const response = await apiFetch(url, {
     method: "DELETE",
   });
 

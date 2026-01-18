@@ -4,9 +4,7 @@ import {
   parseAbsolute,
   parseDate,
 } from "@internationalized/date";
-
-// Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+import { apiFetch } from "$lib/api-client";
 
 /**
  * Fetch member detail by ID from the API
@@ -15,12 +13,10 @@ export async function fetchMemberDetail(
   memberId: number,
   season?: number,
 ): Promise<MemberDetail> {
-  const url = new URL(`${API_BASE_URL}/api/v1.0/members/${memberId}`);
-  if (season) {
-    url.searchParams.set("season", season.toString());
-  }
+  const url = `/api/v1.0/members/${memberId}`;
+  const fullUrl = season ? `${url}?season=${season}` : url;
 
-  const response = await fetch(url.toString());
+  const response = await apiFetch(fullUrl);
 
   if (!response.ok) {
     if (response.status === 404) {

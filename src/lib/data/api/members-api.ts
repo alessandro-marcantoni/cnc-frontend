@@ -1,20 +1,17 @@
 import type { Member } from "$model/members/member";
 import { parseDate } from "@internationalized/date";
-
-// Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+import { apiFetch } from "$lib/api-client";
 
 /**
  * Fetch all members from the API
  * @param season - Optional season name to filter members by
  */
 export async function fetchMembers(season?: string): Promise<Member[]> {
-  const url = new URL(`${API_BASE_URL}/api/v1.0/members`);
-  if (season) {
-    url.searchParams.set("season", season);
-  }
+  const url = season
+    ? `/api/v1.0/members?season=${season}`
+    : "/api/v1.0/members";
 
-  const response = await fetch(url.toString());
+  const response = await apiFetch(url);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch members: ${response.statusText}`);
