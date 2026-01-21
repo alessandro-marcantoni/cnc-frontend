@@ -8,9 +8,8 @@
     const stats = $derived({
         total: members.length,
         active: members.filter((m) => m.membershipStatus === "ACTIVE").length,
-        inactive: members.filter((m) => m.membershipStatus === "INACTIVE")
-            .length,
-        unpaid: members.filter((m) => !m.paid).length,
+        inactive: members.filter((m) => m.membershipStatus !== "ACTIVE").length,
+        unpaid: members.filter((m) => !m.membershipPaid).length,
     });
 </script>
 

@@ -3,6 +3,7 @@
     import { Button } from "$lib/components/ui/button";
     import { Badge, type BadgeVariant } from "$lib/components/ui/badge";
     import { Input } from "$lib/components/ui/input";
+    import { Label } from "$lib/components/ui/label";
     import MultiSelect from "$lib/components/ui/multi-select.svelte";
     import * as Dialog from "$lib/components/ui/dialog";
     import * as Popover from "$lib/components/ui/popover";
@@ -10,6 +11,7 @@
     import * as InputGroup from "$lib/components/ui/input-group";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
     import * as Alert from "$lib/components/ui/alert";
+    import DatePicker from "$lib/components/ui/date-picker.svelte";
     import {
         ChevronUp,
         ChevronDown,
@@ -21,7 +23,13 @@
         CalendarPlus,
         AlertCircle,
         Loader2,
+        Anchor,
     } from "@lucide/svelte";
+    import {
+        today,
+        getLocalTimeZone,
+        type CalendarDate,
+    } from "@internationalized/date";
     import type { FacilityWithStatus } from "$model/facilities/facility-with-status";
     import type { Member } from "$model/members/member";
     import {
@@ -29,6 +37,10 @@
         loadMembers,
     } from "$lib/data/repositories/members-repository";
     import { loadFacilitiesByType } from "$lib/data/repositories/facilities-by-type-repository";
+    import {
+        facilitiesCatalog,
+        loadFacilitiesCatalog,
+    } from "$lib/data/repositories/facilities-catalog-repository";
     import {
         rentFacility,
         getSuggestedPrice,
@@ -78,9 +90,46 @@
     // Combobox state
     let comboboxOpen = $state(false);
 
-    // Load members on mount
+    // Boat and insurance state
+    let boatName = $state("");
+    let boatLengthMeters = $state("");
+    let boatWidthMeters = $state("");
+    let insuranceProvider = $state("");
+    let insuranceNumber = $state("");
+    let insuranceExpiresAt = $state<CalendarDate | undefined>(undefined);
+
+    // Load members and facility types on mount
     onMount(() => {
         loadMembers();
+        loadFacilitiesCatalog();
+    });
+
+    // Check if selected facility type requires boat info
+    const requiresBoat = $derived(() => {
+        if (!selectedFacility) return false;
+        const facilityType = $facilitiesCatalog.find(
+            (ft) => ft.id === selectedFacility!.facilityTypeId,
+        );
+        return facilityType?.hasBoat === true;
+    });
+
+    // Validate boat information
+    const isBoatInfoValid = $derived(() => {
+        if (!requiresBoat()) return true;
+
+        const hasValidBoatInfo =
+            boatName.trim() !== "" &&
+            boatLengthMeters !== "" &&
+            parseFloat(boatLengthMeters) > 0 &&
+            boatWidthMeters !== "" &&
+            parseFloat(boatWidthMeters) > 0;
+
+        const hasValidInsurance =
+            insuranceProvider.trim() !== "" &&
+            insuranceNumber.trim() !== "" &&
+            insuranceExpiresAt !== undefined;
+
+        return hasValidBoatInfo && hasValidInsurance;
     });
 
     // Get facility status
@@ -191,6 +240,14 @@
         submitError = null;
         suggestedPriceInfo = null;
 
+        // Reset boat and insurance fields
+        boatName = "";
+        boatLengthMeters = "";
+        boatWidthMeters = "";
+        insuranceProvider = "";
+        insuranceNumber = "";
+        insuranceExpiresAt = undefined;
+
         // Set default price from facility
         bookingPrice = facility.suggestedPrice.toString();
 
@@ -222,6 +279,7 @@
 
     async function handleBookingSubmit() {
         if (!selectedFacility || !selectedMemberId) return;
+        if (!isBoatInfoValid()) return;
 
         isSubmitting = true;
         submitError = null;
@@ -232,6 +290,24 @@
             seasonId: selectedSeasonId,
             price: parseFloat(bookingPrice),
         };
+
+        // Add boat info if facility type requires it
+        if (requiresBoat()) {
+            rentFacilityRequest.boatInfo = {
+                name: boatName.trim(),
+                lengthMeters: parseFloat(boatLengthMeters),
+                widthMeters: parseFloat(boatWidthMeters),
+                insurances: [
+                    {
+                        provider: insuranceProvider.trim(),
+                        number: insuranceNumber.trim(),
+                        expiresAt: insuranceExpiresAt
+                            ? insuranceExpiresAt.toString()
+                            : "",
+                    },
+                ],
+            };
+        }
 
         try {
             // Call API to rent the facility
@@ -604,6 +680,116 @@
                 {/if}
             </div>
 
+            <!-- Boat Information (if facility type requires it) -->
+            {#if requiresBoat()}
+                <div class="grid gap-4">
+                    <div class="flex items-center gap-2">
+                        <Anchor class="h-5 w-5" />
+                        <h3 class="text-lg font-semibold">
+                            Informazioni Barca
+                        </h3>
+                    </div>
+
+                    <div class="grid gap-4">
+                        <!-- Boat Name -->
+                        <div class="grid gap-2">
+                            <Label for="boat-name">
+                                Nome Barca<span class="text-destructive">*</span
+                                >
+                            </Label>
+                            <Input
+                                id="boat-name"
+                                type="text"
+                                bind:value={boatName}
+                                placeholder="Es. La Perla del Mare"
+                            />
+                        </div>
+
+                        <!-- Boat Dimensions -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="grid gap-2">
+                                <Label for="boat-length">
+                                    Lunghezza (m)<span class="text-destructive"
+                                        >*</span
+                                    >
+                                </Label>
+                                <Input
+                                    id="boat-length"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    bind:value={boatLengthMeters}
+                                    placeholder="0.00"
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="boat-width">
+                                    Larghezza (m)<span class="text-destructive"
+                                        >*</span
+                                    >
+                                </Label>
+                                <Input
+                                    id="boat-width"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    bind:value={boatWidthMeters}
+                                    placeholder="0.00"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Insurance Information -->
+                        <div class="grid gap-3">
+                            <Label>
+                                Assicurazione<span class="text-destructive"
+                                    >*</span
+                                >
+                            </Label>
+
+                            <div class="grid gap-3 p-3 border rounded-lg">
+                                <div class="grid gap-2">
+                                    <Label for="insurance-provider">
+                                        Compagnia Assicurativa<span
+                                            class="text-destructive">*</span
+                                        >
+                                    </Label>
+                                    <Input
+                                        id="insurance-provider"
+                                        type="text"
+                                        bind:value={insuranceProvider}
+                                        placeholder="Es. Generali"
+                                    />
+                                </div>
+
+                                <div class="grid gap-2">
+                                    <Label for="insurance-number">
+                                        Numero Polizza<span
+                                            class="text-destructive">*</span
+                                        >
+                                    </Label>
+                                    <Input
+                                        id="insurance-number"
+                                        type="text"
+                                        bind:value={insuranceNumber}
+                                        placeholder="Es. 123456789"
+                                    />
+                                </div>
+
+                                <div class="grid gap-2">
+                                    <DatePicker
+                                        id="insurance-expires"
+                                        label="Data Scadenza *"
+                                        bind:value={insuranceExpiresAt}
+                                        placeholder="Seleziona data"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {/if}
+
             {#if suggestedPriceInfo && suggestedPriceInfo.applicableRules > 0}
                 <Alert.Root variant="default">
                     <AlertCircle class="h-4 w-4" />
@@ -645,7 +831,10 @@
             </Button>
             <Button
                 onclick={handleBookingSubmit}
-                disabled={!selectedMemberId || !bookingPrice || isSubmitting}
+                disabled={!selectedMemberId ||
+                    !bookingPrice ||
+                    !isBoatInfoValid() ||
+                    isSubmitting}
             >
                 {#if isSubmitting}
                     <Loader2 class="mr-2 h-4 w-4 animate-spin" />
