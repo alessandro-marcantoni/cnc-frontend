@@ -42,7 +42,7 @@
                     variant="outline"
                     class="w-full justify-between font-normal"
                 >
-                    {value ? formatDate(value) : "Select date"}
+                    {value ? formatDate(value) : placeholder || "Select date"}
                     <ChevronDownIcon />
                 </Button>
             {/snippet}
@@ -55,7 +55,6 @@
                 onValueChange={() => {
                     open = false;
                 }}
-                maxValue={today(getLocalTimeZone())}
             />
         </Popover.Content>
     </Popover.Root>

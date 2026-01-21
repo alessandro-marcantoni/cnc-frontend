@@ -79,7 +79,7 @@
             {#if member.phoneNumbers && member.phoneNumbers.length > 0}
                 <div class="space-y-1">
                     {#each member.phoneNumbers as phone}
-                        <p class="text-sm">{phone}</p>
+                        <p class="text-sm">{phone.number}</p>
                     {/each}
                 </div>
             {:else}

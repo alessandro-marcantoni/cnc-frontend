@@ -16,6 +16,16 @@ export interface RentFacilityRequest {
   facilityId: number;
   seasonId: number;
   price: number;
+  boatInfo?: {
+    name: string;
+    lengthMeters: number;
+    widthMeters: number;
+    insurances: Array<{
+      provider: string;
+      number: string;
+      expiresAt: string; // ISO date string
+    }>;
+  };
 }
 
 export interface SuggestedPriceResponse {
@@ -46,6 +56,7 @@ export async function fetchFacilitiesCatalog(): Promise<FacilityType[]> {
     name: facility.name,
     description: facility.description,
     suggestedPrice: facility.suggestedPrice,
+    hasBoat: facility.hasBoat || false,
   }));
 
   return facilityTypes;
@@ -134,6 +145,7 @@ export async function fetchRentedFacilities(
           name: facility.boatInfo.name,
           lengthMeters: facility.boatInfo.lengthMeters,
           widthMeters: facility.boatInfo.widthMeters,
+          insurances: facility.boatInfo.insurances || [],
         }
       : null,
   }));

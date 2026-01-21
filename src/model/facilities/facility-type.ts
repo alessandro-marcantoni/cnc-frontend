@@ -3,4 +3,5 @@ export type FacilityType = {
   name: string;
   description: string;
   suggestedPrice: number;
+  hasBoat: boolean;
 };

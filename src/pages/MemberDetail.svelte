@@ -160,8 +160,6 @@
             }
         });
 
-        console.log("Season changed:", selectedSeason);
-
         if (selectedSeason) {
             Promise.all([
                 loadMemberDetail(

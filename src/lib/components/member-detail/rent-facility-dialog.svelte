@@ -8,6 +8,8 @@
     import { Button } from "$lib/components/ui/button";
     import { Label } from "$lib/components/ui/label";
     import { Badge } from "$lib/components/ui/badge";
+    import { Input } from "$lib/components/ui/input";
+    import Calendar from "$lib/components/ui/calendar/calendar.svelte";
     import WaitlistAlert from "$lib/components/waitlist/waitlist-alert.svelte";
     import JoinWaitlistDialog from "$lib/components/waitlist/join-waitlist-dialog.svelte";
     import { addToWaitlist } from "$lib/data/api";
@@ -18,8 +20,16 @@
         Loader2,
         RefreshCw,
         Sparkles,
+        Anchor,
+        ChevronLeft,
+        ChevronRight,
     } from "@lucide/svelte";
 
+    import {
+        today,
+        getLocalTimeZone,
+        type CalendarDate,
+    } from "@internationalized/date";
     import type { FacilityType } from "$model/facilities/facility-type";
     import type { FacilityWithStatus } from "$model/facilities/facility-with-status";
     import type { Season } from "$model/shared/season";
@@ -30,6 +40,7 @@
         getSuggestedPrice,
     } from "$lib/data/api/facilities-api";
     import { loadWaitlist } from "$lib/data/repositories";
+    import DatePicker from "../ui/date-picker.svelte";
 
     interface Props {
         open: boolean;
@@ -77,6 +88,17 @@
         savingsAmount: number;
     } | null>(null);
 
+    // Boat and insurance state
+    let boatName = $state("");
+    let boatLengthMeters = $state("");
+    let boatWidthMeters = $state("");
+    let insuranceProvider = $state("");
+    let insuranceNumber = $state("");
+    let insuranceExpiresAt = $state<CalendarDate | undefined>(undefined);
+
+    // Multi-step form state
+    let currentStep = $state(1);
+
     const isRenewMode = $derived(mode === "renew");
     const defaultSeason = $derived(currentSeason.name.toString());
 
@@ -88,10 +110,52 @@
             isSubmitting = false;
             selectedSeason = defaultSeason;
 
+            // Reset step
+            currentStep = 1;
+
             if (isRenewMode && facilityToRenew) {
                 // Renew mode: use existing facility
                 selectedFacilityType = null;
                 selectedFacilityId = facilityToRenew.facilityId;
+
+                // Pre-populate boat and insurance fields if they exist
+                if (facilityToRenew.boatInfo) {
+                    boatName = facilityToRenew.boatInfo.name;
+                    boatLengthMeters =
+                        facilityToRenew.boatInfo.lengthMeters.toString();
+                    boatWidthMeters =
+                        facilityToRenew.boatInfo.widthMeters.toString();
+
+                    // Pre-populate insurance info from first insurance (UI only supports one)
+                    const insurance = facilityToRenew.boatInfo.insurances?.[0];
+                    if (insurance) {
+                        insuranceProvider = insurance.provider;
+                        insuranceNumber = insurance.number;
+                        // Parse insurance expiration date
+                        try {
+                            const expiryDate = new Date(insurance.expiresAt);
+                            insuranceExpiresAt = today(getLocalTimeZone()).set({
+                                year: expiryDate.getFullYear(),
+                                month: expiryDate.getMonth() + 1,
+                                day: expiryDate.getDate(),
+                            });
+                        } catch {
+                            insuranceExpiresAt = undefined;
+                        }
+                    } else {
+                        insuranceProvider = "";
+                        insuranceNumber = "";
+                        insuranceExpiresAt = undefined;
+                    }
+                } else {
+                    // Reset boat and insurance fields
+                    boatName = "";
+                    boatLengthMeters = "";
+                    boatWidthMeters = "";
+                    insuranceProvider = "";
+                    insuranceNumber = "";
+                    insuranceExpiresAt = undefined;
+                }
 
                 // Find facility type and fetch suggested price from API
                 const facilityType = facilityTypes.find(
@@ -115,10 +179,16 @@
                     price = "";
                 }
             } else {
-                // Rent mode: reset selections
+                // Rent mode: reset selections and boat fields
                 selectedFacilityType = null;
                 selectedFacilityId = null;
                 price = "";
+                boatName = "";
+                boatLengthMeters = "";
+                boatWidthMeters = "";
+                insuranceProvider = "";
+                insuranceNumber = "";
+                insuranceExpiresAt = undefined;
             }
         }
     });
@@ -258,12 +328,63 @@
             : (selectedFacility?.suggestedPrice ?? null),
     );
 
-    const isValid = $derived(
+    const requiresBoat = $derived(() => {
+        if (isRenewMode && facilityToRenew) {
+            // In renew mode, check if the facility being renewed has boat info
+            return facilityToRenew.boatInfo !== null;
+        }
+        // In rent mode, check if selected facility type requires boat
+        return (
+            selectedFacilityType !== null &&
+            facilityTypes.find((ft) => ft.id === selectedFacilityType)
+                ?.hasBoat === true
+        );
+    });
+
+    const isBoatInfoValid = $derived(() => {
+        if (!requiresBoat) return true;
+
+        const hasValidBoatInfo =
+            boatName.trim() !== "" &&
+            boatLengthMeters !== "" &&
+            parseFloat(boatLengthMeters) > 0 &&
+            boatWidthMeters !== "" &&
+            parseFloat(boatWidthMeters) > 0;
+
+        const hasValidInsurance =
+            insuranceProvider.trim() !== "" &&
+            insuranceNumber.trim() !== "" &&
+            insuranceExpiresAt !== undefined;
+
+        return hasValidBoatInfo && hasValidInsurance;
+    });
+
+    const totalSteps = $derived(requiresBoat() ? 3 : 2);
+
+    const isStep1Valid = $derived(
         selectedSeason &&
-            price &&
-            parseFloat(price) > 0 &&
             (isRenewMode ||
-                (selectedFacilityId !== null && hasAvailableFacilities)),
+                (selectedFacilityType !== null &&
+                    selectedFacilityId !== null &&
+                    hasAvailableFacilities)),
+    );
+
+    const isStep2Valid = $derived(price && parseFloat(price) > 0);
+
+    const isStep3Valid = $derived(isBoatInfoValid);
+
+    const canGoToNextStep = $derived(
+        currentStep === 1
+            ? isStep1Valid
+            : currentStep === 2
+              ? isStep2Valid
+              : currentStep === 3
+                ? isStep3Valid
+                : false,
+    );
+
+    const isValid = $derived(
+        isStep1Valid && isStep2Valid && (!requiresBoat() || isStep3Valid),
     );
 
     function handleClose() {
@@ -313,6 +434,24 @@
                 price: priceValue,
             };
 
+            // Add boat info if facility type requires it
+            if (requiresBoat()) {
+                rentFacilityRequest.boatInfo = {
+                    name: boatName.trim(),
+                    lengthMeters: parseFloat(boatLengthMeters),
+                    widthMeters: parseFloat(boatWidthMeters),
+                    insurances: [
+                        {
+                            provider: insuranceProvider.trim(),
+                            number: insuranceNumber.trim(),
+                            expiresAt: insuranceExpiresAt
+                                ? insuranceExpiresAt.toString()
+                                : "",
+                        },
+                    ],
+                };
+            }
+
             await rentFacility(rentFacilityRequest);
 
             // Success
@@ -339,6 +478,26 @@
         selectedFacilityType = typeId;
         selectedFacilityId = null;
         facilityTypeComboboxOpen = false;
+
+        // Reset boat and insurance fields when facility type changes
+        boatName = "";
+        boatLengthMeters = "";
+        boatWidthMeters = "";
+        insuranceProvider = "";
+        insuranceNumber = "";
+        insuranceExpiresAt = undefined;
+    }
+
+    function goToNextStep() {
+        if (currentStep < totalSteps) {
+            currentStep++;
+        }
+    }
+
+    function goToPreviousStep() {
+        if (currentStep > 1) {
+            currentStep--;
+        }
     }
 </script>
 
@@ -349,240 +508,378 @@
                 {#if isRenewMode}
                     <RefreshCw class="h-5 w-5" />
                     Rinnova Affitto Servizio
+                    {#if requiresBoat()}
+                        - Passo {currentStep} di {totalSteps}
+                    {/if}
                 {:else}
-                    Affitta Servizio
+                    Affitta Servizio - Passo {currentStep} di {totalSteps}
                 {/if}
             </Dialog.Title>
             <Dialog.Description>
                 {#if isRenewMode && facilityToRenew}
-                    Rinnova l'affitto di {facilityToRenew.facilityName} - {facilityToRenew.facilityIdentifier}
-                    per
-                    {memberName}
-                {:else}
-                    Seleziona il servizio da affittare per {memberName}
+                    {#if currentStep === 1}
+                        Rinnova l'affitto di {facilityToRenew.facilityName} - {facilityToRenew.facilityIdentifier}
+                        per
+                        {memberName}
+                    {:else if currentStep === 2}
+                        Imposta il prezzo per il servizio
+                    {:else if currentStep === 3}
+                        Verifica e aggiorna le informazioni della barca
+                    {/if}
+                {:else if currentStep === 1}
+                    Seleziona stagione e servizio per {memberName}
+                {:else if currentStep === 2}
+                    Imposta il prezzo per il servizio
+                {:else if currentStep === 3}
+                    Inserisci le informazioni della barca
                 {/if}
             </Dialog.Description>
         </Dialog.Header>
 
         <div class="grid gap-4 py-4">
-            <!-- Season Selection -->
-            <div class="grid gap-2">
-                <Label for="season">
-                    Stagione <span class="text-destructive">*</span>
-                </Label>
-                <Select.Root type="single" bind:value={selectedSeason}>
-                    <Select.Trigger id="season" class="w-full">
-                        {selectedSeason
-                            ? `Stagione ${selectedSeason}`
-                            : "Seleziona stagione"}
-                    </Select.Trigger>
-                    <Select.Content>
-                        <Select.Group>
-                            <Select.Label>Stagioni Disponibili</Select.Label>
-                            {#if isRenewMode}
-                                {#each availableSeasons.filter((season) => season.name >= currentSeason.name) as season (season.name)}
-                                    <Select.Item value={season.name.toString()}>
-                                        Stagione {season.name}
-                                    </Select.Item>
-                                {/each}
-                            {:else}
-                                {#each availableSeasons as season (season.name)}
-                                    <Select.Item value={season.name.toString()}>
-                                        Stagione {season.name}
-                                    </Select.Item>
-                                {/each}
-                            {/if}
-                        </Select.Group>
-                    </Select.Content>
-                </Select.Root>
-                {#if isRenewMode}
-                    <p class="text-xs text-muted-foreground">
-                        Puoi rinnovare solo per la stagione corrente o stagioni
-                        future.
-                    </p>
-                {/if}
-            </div>
-
-            {#if !isRenewMode}
-                <!-- Facility Type Selection for Rent Mode -->
+            <!-- Step 1: Season and Facility Selection -->
+            {#if currentStep === 1}
+                <!-- Season Selection -->
                 <div class="grid gap-2">
-                    <label
-                        class="text-sm font-medium"
-                        for="facility-type-trigger"
-                    >
-                        Tipo di Servizio <span class="text-destructive">*</span>
-                    </label>
-                    <Popover.Root bind:open={facilityTypeComboboxOpen}>
-                        <Popover.Trigger id="facility-type-trigger">
-                            <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={facilityTypeComboboxOpen}
-                                class="w-full justify-between"
-                            >
-                                {selectedFacilityTypeName ||
-                                    "Seleziona tipo di servizio..."}
-                                <ChevronsUpDown
-                                    class="ml-2 h-4 w-4 shrink-0 opacity-50"
-                                />
-                            </Button>
-                        </Popover.Trigger>
-                        <Popover.Content class="w-full p-0">
-                            <Command.Root>
-                                <Command.Input
-                                    placeholder="Cerca tipo di servizio..."
-                                />
-                                <Command.Empty
-                                    >Nessun tipo trovato.</Command.Empty
+                    <Label for="season">
+                        Stagione <span class="text-destructive">*</span>
+                    </Label>
+                    <Select.Root type="single" bind:value={selectedSeason}>
+                        <Select.Trigger id="season" class="w-full">
+                            {selectedSeason
+                                ? `Stagione ${selectedSeason}`
+                                : "Seleziona stagione"}
+                        </Select.Trigger>
+                        <Select.Content>
+                            <Select.Group>
+                                <Select.Label>Stagioni Disponibili</Select.Label
                                 >
-                                <Command.List>
-                                    <Command.Group>
-                                        {#each facilityTypeOptions as option (option.value)}
-                                            <Command.Item
-                                                value={option.label}
-                                                onSelect={() =>
-                                                    handleFacilityTypeSelect(
-                                                        option.value,
-                                                    )}
-                                            >
-                                                <Check
-                                                    class={selectedFacilityType ===
-                                                    option.value
-                                                        ? "mr-2 h-4 w-4 opacity-100"
-                                                        : "mr-2 h-4 w-4 opacity-0"}
-                                                />
-                                                <div>
-                                                    <div>{option.label}</div>
-                                                    <div
-                                                        class="text-xs text-muted-foreground"
-                                                    >
-                                                        {option.description}
-                                                    </div>
-                                                </div>
-                                            </Command.Item>
-                                        {/each}
-                                    </Command.Group>
-                                </Command.List>
-                            </Command.Root>
-                        </Popover.Content>
-                    </Popover.Root>
+                                {#if isRenewMode}
+                                    {#each availableSeasons.filter((season) => season.name >= currentSeason.name) as season (season.name)}
+                                        <Select.Item
+                                            value={season.name.toString()}
+                                        >
+                                            Stagione {season.name}
+                                        </Select.Item>
+                                    {/each}
+                                {:else}
+                                    {#each availableSeasons as season (season.name)}
+                                        <Select.Item
+                                            value={season.name.toString()}
+                                        >
+                                            Stagione {season.name}
+                                        </Select.Item>
+                                    {/each}
+                                {/if}
+                            </Select.Group>
+                        </Select.Content>
+                    </Select.Root>
+                    {#if isRenewMode}
+                        <p class="text-xs text-muted-foreground">
+                            Puoi rinnovare solo per la stagione corrente o
+                            stagioni future.
+                        </p>
+                    {/if}
                 </div>
 
-                <!-- Specific Facility Selection for Rent Mode -->
-                {#if selectedFacilityType}
+                {#if !isRenewMode}
+                    <!-- Facility Type Selection for Rent Mode -->
                     <div class="grid gap-2">
                         <label
                             class="text-sm font-medium"
-                            for="facility-trigger"
+                            for="facility-type-trigger"
                         >
-                            Servizio Specifico <span class="text-destructive"
+                            Tipo di Servizio <span class="text-destructive"
                                 >*</span
                             >
                         </label>
-                        <Select.Root
-                            type="single"
-                            onValueChange={(value) => {
-                                selectedFacilityId = value
-                                    ? parseInt(value)
-                                    : null;
-                            }}
-                        >
-                            <Select.Trigger
-                                class="w-full"
-                                id="facility-trigger"
-                            >
-                                {#if selectedFacilityId}
-                                    {availableFacilities.find(
-                                        (f) => f.id === selectedFacilityId,
-                                    )?.identifier || "Seleziona servizio..."}
-                                {:else}
-                                    Seleziona servizio...
-                                {/if}
-                            </Select.Trigger>
-                            <Select.Content>
-                                <Select.Group>
-                                    <Select.Label
-                                        >Servizi Disponibili</Select.Label
+                        <Popover.Root bind:open={facilityTypeComboboxOpen}>
+                            <Popover.Trigger id="facility-type-trigger">
+                                <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={facilityTypeComboboxOpen}
+                                    class="w-full justify-between"
+                                >
+                                    {selectedFacilityTypeName ||
+                                        "Seleziona tipo di servizio..."}
+                                    <ChevronsUpDown
+                                        class="ml-2 h-4 w-4 shrink-0 opacity-50"
+                                    />
+                                </Button>
+                            </Popover.Trigger>
+                            <Popover.Content class="w-full p-0">
+                                <Command.Root>
+                                    <Command.Input
+                                        placeholder="Cerca tipo di servizio..."
+                                    />
+                                    <Command.Empty
+                                        >Nessun tipo trovato.</Command.Empty
                                     >
-                                    {#if hasAvailableFacilities}
-                                        {#each availableFacilitiesFiltered as facility (facility.id)}
-                                            <Select.Item
-                                                value={facility.id.toString()}
-                                            >
-                                                {facility.identifier} - €{facility.suggestedPrice.toFixed(
-                                                    2,
-                                                )}
-                                            </Select.Item>
-                                        {/each}
-                                    {:else}
-                                        <Select.Item value="" disabled>
-                                            Nessun servizio disponibile
-                                        </Select.Item>
-                                    {/if}
-                                </Select.Group>
-                            </Select.Content>
-                        </Select.Root>
+                                    <Command.List>
+                                        <Command.Group>
+                                            {#each facilityTypeOptions as option (option.value)}
+                                                <Command.Item
+                                                    value={option.label}
+                                                    onSelect={() =>
+                                                        handleFacilityTypeSelect(
+                                                            option.value,
+                                                        )}
+                                                >
+                                                    <Check
+                                                        class={selectedFacilityType ===
+                                                        option.value
+                                                            ? "mr-2 h-4 w-4 opacity-100"
+                                                            : "mr-2 h-4 w-4 opacity-0"}
+                                                    />
+                                                    <div>
+                                                        <div>
+                                                            {option.label}
+                                                        </div>
+                                                        <div
+                                                            class="text-xs text-muted-foreground"
+                                                        >
+                                                            {option.description}
+                                                        </div>
+                                                    </div>
+                                                </Command.Item>
+                                            {/each}
+                                        </Command.Group>
+                                    </Command.List>
+                                </Command.Root>
+                            </Popover.Content>
+                        </Popover.Root>
                     </div>
 
-                    <!-- Show waitlist alert if no facilities available -->
-                    {#if !hasAvailableFacilities && selectedFacilityTypeName}
-                        <WaitlistAlert
-                            facilityTypeName={selectedFacilityTypeName}
-                            waitlistCount={0}
-                            memberPosition={null}
-                            onJoinWaitlist={() =>
-                                (joinWaitlistDialogOpen = true)}
-                        />
+                    <!-- Specific Facility Selection for Rent Mode -->
+                    {#if selectedFacilityType}
+                        <div class="grid gap-2">
+                            <label
+                                class="text-sm font-medium"
+                                for="facility-trigger"
+                            >
+                                Servizio Specifico <span
+                                    class="text-destructive">*</span
+                                >
+                            </label>
+                            <Select.Root
+                                type="single"
+                                onValueChange={(value) => {
+                                    selectedFacilityId = value
+                                        ? parseInt(value)
+                                        : null;
+                                }}
+                            >
+                                <Select.Trigger
+                                    class="w-full"
+                                    id="facility-trigger"
+                                >
+                                    {#if selectedFacilityId}
+                                        {availableFacilities.find(
+                                            (f) => f.id === selectedFacilityId,
+                                        )?.identifier ||
+                                            "Seleziona servizio..."}
+                                    {:else}
+                                        Seleziona servizio...
+                                    {/if}
+                                </Select.Trigger>
+                                <Select.Content>
+                                    <Select.Group>
+                                        <Select.Label
+                                            >Servizi Disponibili</Select.Label
+                                        >
+                                        {#if hasAvailableFacilities}
+                                            {#each availableFacilitiesFiltered as facility (facility.id)}
+                                                <Select.Item
+                                                    value={facility.id.toString()}
+                                                >
+                                                    {facility.identifier} - €{facility.suggestedPrice.toFixed(
+                                                        2,
+                                                    )}
+                                                </Select.Item>
+                                            {/each}
+                                        {:else}
+                                            <Select.Item value="" disabled>
+                                                Nessun servizio disponibile
+                                            </Select.Item>
+                                        {/if}
+                                    </Select.Group>
+                                </Select.Content>
+                            </Select.Root>
+                        </div>
+
+                        <!-- Show waitlist alert if no facilities available -->
+                        {#if !hasAvailableFacilities && selectedFacilityTypeName}
+                            <WaitlistAlert
+                                facilityTypeName={selectedFacilityTypeName}
+                                waitlistCount={0}
+                                memberPosition={null}
+                                onJoinWaitlist={() =>
+                                    (joinWaitlistDialogOpen = true)}
+                            />
+                        {/if}
                     {/if}
                 {/if}
             {/if}
 
-            <!-- Price Input -->
-            <div class="grid gap-2">
-                <label for="price" class="text-sm font-medium">
-                    Prezzo<span class="text-destructive">*</span>
-                </label>
-                <InputGroup.Root>
-                    <InputGroup.Addon>
-                        <InputGroup.Text>€</InputGroup.Text>
-                    </InputGroup.Addon>
-                    <InputGroup.Input
-                        id="price"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        bind:value={price}
-                        placeholder="0.00"
-                    />
-                    <InputGroup.Addon align="inline-end">
-                        <InputGroup.Text>EUR</InputGroup.Text>
-                    </InputGroup.Addon>
-                </InputGroup.Root>
-                {#if priceInfo?.hasSpecialPrice}
-                    <Alert.Root>
-                        <Sparkles class="h-4 w-4" />
-                        <Alert.Title class="flex items-center gap-2">
-                            <Badge variant="default">Prezzo Speciale</Badge>
-                        </Alert.Title>
-                        <Alert.Description>
-                            Risparmi €{priceInfo.savingsAmount.toFixed(2)} grazie
-                            ai tuoi altri servizi attivi.
-                        </Alert.Description>
-                    </Alert.Root>
-                {:else if suggestedPrice !== null && !isLoadingPrice}
-                    <p class="text-xs text-muted-foreground">
-                        Prezzo suggerito: €{suggestedPrice.toFixed(2)}
-                    </p>
-                {/if}
-                {#if isLoadingPrice}
-                    <p
-                        class="text-xs text-muted-foreground flex items-center gap-2"
-                    >
-                        <Loader2 class="h-3 w-3 animate-spin" />
-                        Calcolo del prezzo...
-                    </p>
-                {/if}
-            </div>
+            <!-- Step 2: Price Input -->
+            {#if currentStep === 2}
+                <div class="grid gap-2">
+                    <label for="price" class="text-sm font-medium">
+                        Prezzo<span class="text-destructive">*</span>
+                    </label>
+                    <InputGroup.Root>
+                        <InputGroup.Addon>
+                            <InputGroup.Text>€</InputGroup.Text>
+                        </InputGroup.Addon>
+                        <InputGroup.Input
+                            id="price"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            bind:value={price}
+                            placeholder="0.00"
+                        />
+                        <InputGroup.Addon align="inline-end">
+                            <InputGroup.Text>EUR</InputGroup.Text>
+                        </InputGroup.Addon>
+                    </InputGroup.Root>
+                    {#if priceInfo?.hasSpecialPrice}
+                        <Alert.Root>
+                            <Sparkles class="h-4 w-4" />
+                            <Alert.Title class="flex items-center gap-2">
+                                <Badge variant="default">Prezzo Speciale</Badge>
+                            </Alert.Title>
+                            <Alert.Description>
+                                Risparmi €{priceInfo.savingsAmount.toFixed(2)} grazie
+                                ai tuoi altri servizi attivi.
+                            </Alert.Description>
+                        </Alert.Root>
+                    {:else if suggestedPrice !== null && !isLoadingPrice}
+                        <p class="text-xs text-muted-foreground">
+                            Prezzo suggerito: €{suggestedPrice.toFixed(2)}
+                        </p>
+                    {/if}
+                    {#if isLoadingPrice}
+                        <p
+                            class="text-xs text-muted-foreground flex items-center gap-2"
+                        >
+                            <Loader2 class="h-3 w-3 animate-spin" />
+                            Calcolo del prezzo...
+                        </p>
+                    {/if}
+                </div>
+            {/if}
+
+            <!-- Step 3: Boat Information (only if facility type requires it) -->
+            {#if currentStep === 3 && requiresBoat()}
+                <div class="grid gap-4">
+                    <div class="flex items-center gap-2">
+                        <Anchor class="h-5 w-5" />
+                        <h3 class="text-lg font-semibold">
+                            Informazioni Barca
+                        </h3>
+                    </div>
+
+                    <div class="grid gap-4">
+                        <!-- Boat Name -->
+                        <div class="grid gap-2">
+                            <Label for="boat-name">
+                                Nome Barca<span class="text-destructive">*</span
+                                >
+                            </Label>
+                            <Input
+                                id="boat-name"
+                                type="text"
+                                bind:value={boatName}
+                                placeholder="Es. La Perla del Mare"
+                            />
+                        </div>
+
+                        <!-- Boat Dimensions -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="grid gap-2">
+                                <Label for="boat-length">
+                                    Lunghezza (m)<span class="text-destructive"
+                                        >*</span
+                                    >
+                                </Label>
+                                <Input
+                                    id="boat-length"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    bind:value={boatLengthMeters}
+                                    placeholder="0.00"
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="boat-width">
+                                    Larghezza (m)<span class="text-destructive"
+                                        >*</span
+                                    >
+                                </Label>
+                                <Input
+                                    id="boat-width"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    bind:value={boatWidthMeters}
+                                    placeholder="0.00"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Insurance Information -->
+                        <div class="grid gap-3">
+                            <Label>
+                                Assicurazione<span class="text-destructive"
+                                    >*</span
+                                >
+                            </Label>
+
+                            <div class="grid gap-3 p-3 border rounded-lg">
+                                <div class="grid gap-2">
+                                    <Label for="insurance-provider">
+                                        Compagnia Assicurativa<span
+                                            class="text-destructive">*</span
+                                        >
+                                    </Label>
+                                    <Input
+                                        id="insurance-provider"
+                                        type="text"
+                                        bind:value={insuranceProvider}
+                                        placeholder="Es. Generali"
+                                    />
+                                </div>
+
+                                <div class="grid gap-2">
+                                    <Label for="insurance-number">
+                                        Numero Polizza<span
+                                            class="text-destructive">*</span
+                                        >
+                                    </Label>
+                                    <Input
+                                        id="insurance-number"
+                                        type="text"
+                                        bind:value={insuranceNumber}
+                                        placeholder="Es. 123456789"
+                                    />
+                                </div>
+
+                                <div class="grid gap-2">
+                                    <DatePicker
+                                        id="insurance-expires"
+                                        label="Data Scadenza *"
+                                        bind:value={insuranceExpiresAt}
+                                        placeholder="Seleziona data"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {/if}
         </div>
 
         <!-- Error Message -->
@@ -594,27 +891,55 @@
             </Alert.Root>
         {/if}
 
-        <Dialog.Footer>
-            <Button
-                variant="outline"
-                onclick={handleClose}
-                disabled={isSubmitting}
-            >
-                Annulla
-            </Button>
-            <Button onclick={handleSubmit} disabled={!isValid || isSubmitting}>
-                {#if isSubmitting}
-                    <Loader2 class="mr-2 h-4 w-4 animate-spin" />
-                    {isRenewMode
-                        ? "Rinnovo in corso..."
-                        : "Affitto in corso..."}
-                {:else if isRenewMode}
-                    <RefreshCw class="h-4 w-4 mr-2" />
-                    Conferma Rinnovo
-                {:else}
-                    Conferma Affitto
+        <Dialog.Footer class="flex justify-between">
+            <div class="flex gap-2">
+                {#if currentStep > 1}
+                    <Button
+                        variant="outline"
+                        onclick={goToPreviousStep}
+                        disabled={isSubmitting}
+                    >
+                        <ChevronLeft class="h-4 w-4 mr-2" />
+                        Indietro
+                    </Button>
                 {/if}
-            </Button>
+                <Button
+                    variant="outline"
+                    onclick={handleClose}
+                    disabled={isSubmitting}
+                >
+                    Annulla
+                </Button>
+            </div>
+
+            <div>
+                {#if currentStep < totalSteps}
+                    <Button
+                        onclick={goToNextStep}
+                        disabled={!canGoToNextStep || isSubmitting}
+                    >
+                        Avanti
+                        <ChevronRight class="h-4 w-4 ml-2" />
+                    </Button>
+                {:else}
+                    <Button
+                        onclick={handleSubmit}
+                        disabled={!isValid || isSubmitting}
+                    >
+                        {#if isSubmitting}
+                            <Loader2 class="mr-2 h-4 w-4 animate-spin" />
+                            {isRenewMode
+                                ? "Rinnovo in corso..."
+                                : "Affitto in corso..."}
+                        {:else if isRenewMode}
+                            <RefreshCw class="h-4 w-4 mr-2" />
+                            Conferma Rinnovo
+                        {:else}
+                            Conferma Affitto
+                        {/if}
+                    </Button>
+                {/if}
+            </div>
         </Dialog.Footer>
     </Dialog.Content>
 </Dialog.Root>

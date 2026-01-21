@@ -10,7 +10,7 @@ import Members from "./pages/Members.svelte";
 import FacilityTypeDetail from "./pages/FacilityTypeDetail.svelte";
 import FacilityTypeWaitlist from "./pages/FacilityTypeWaitlist.svelte";
 import Login from "./pages/Login.svelte";
-import { authClient } from "$lib/auth-client";
+import { getAuthToken } from "$lib/api-client";
 
 const openPaths: string[] = ["/login"];
 
@@ -73,7 +73,7 @@ async function homeGuard(route: RouteResult): Promise<boolean> {
     return false;
   }
   if (openPaths.includes(path)) return true;
-  const token = await authClient.token().then((x) => x.data?.token);
+  const token = await getAuthToken();
   if (!token) {
     goto("/login");
     return false;

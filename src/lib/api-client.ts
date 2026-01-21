@@ -3,10 +3,16 @@ import { authClient } from "$lib/auth-client";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
-async function getAuthToken(): Promise<string | null> {
+let authToken: string | null = null;
+
+export async function getAuthToken(): Promise<string | null> {
+  if (authToken) {
+    return authToken;
+  }
   try {
     const token = await authClient.token().then((x) => x.data?.token);
-    return token || null;
+    authToken = token || null;
+    return authToken;
   } catch (error) {
     console.error("Failed to get auth token:", error);
     return null;

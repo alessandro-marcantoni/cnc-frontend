@@ -12,6 +12,7 @@
         Trash2,
         CirclePlus,
         Euro,
+        ShieldCheck,
     } from "@lucide/svelte";
     import type { RentedFacility } from "$model/facilities/rented-facility";
     import { formatDate } from "$model/shared/date-utils";
@@ -134,6 +135,49 @@
                     <p class="font-medium">{facility.boatInfo.widthMeters}m</p>
                 </div>
             </div>
+
+            <!-- Insurance Info -->
+            {#if facility.boatInfo.insurances && facility.boatInfo.insurances.length > 0}
+                <Separator class="my-3" />
+                <div class="mt-3">
+                    <div class="flex items-center gap-2 mb-2">
+                        <ShieldCheck class="h-4 w-4 text-muted-foreground" />
+                        <span class="text-sm font-medium">Assicurazione</span>
+                    </div>
+                    {#each facility.boatInfo.insurances as insurance}
+                        <div class="grid grid-cols-3 gap-3 text-sm mt-2">
+                            <div>
+                                <p class="text-muted-foreground mb-1">
+                                    Compagnia
+                                </p>
+                                <p class="font-medium">{insurance.provider}</p>
+                            </div>
+                            <div>
+                                <p class="text-muted-foreground mb-1">
+                                    Numero Polizza
+                                </p>
+                                <p class="font-medium font-mono text-xs">
+                                    {insurance.number}
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-muted-foreground mb-1">
+                                    Scadenza
+                                </p>
+                                <p class="font-medium">
+                                    {new Date(
+                                        insurance.expiresAt,
+                                    ).toLocaleDateString("it-IT", {
+                                        year: "numeric",
+                                        month: "short",
+                                        day: "2-digit",
+                                    })}
+                                </p>
+                            </div>
+                        </div>
+                    {/each}
+                </div>
+            {/if}
         </div>
     {/if}
 
