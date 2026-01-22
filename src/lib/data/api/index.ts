@@ -27,3 +27,4 @@ export type {
   WaitlistMemberDetail,
   AddToWaitlistRequest,
 } from "./waitlist-api";
+export { downloadMemberListPDF, downloadMemberDetailPDF } from "./reports-api";

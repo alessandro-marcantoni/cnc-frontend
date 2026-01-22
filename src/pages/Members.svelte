@@ -8,7 +8,13 @@
     import * as Card from "$lib/components/ui/card";
     import * as Select from "$lib/components/ui/select";
     import { Button } from "$lib/components/ui/button";
-    import { RefreshCw, CircleAlert, UserPlus, Calendar } from "@lucide/svelte";
+    import {
+        RefreshCw,
+        CircleAlert,
+        UserPlus,
+        Calendar,
+        FileText,
+    } from "@lucide/svelte";
     import {
         members,
         isLoadingMembers,
@@ -19,12 +25,16 @@
         getSeasons,
         getCurrentSeason,
     } from "$lib/data/repositories/seasons-repository";
+    import { downloadMemberListPDF } from "$lib/data/api";
     import type { Season } from "$model/shared/season";
     import { formatDate } from "$model/shared/date-utils";
     import { getQueryParam, setQueryParam } from "$lib/utils/query-params";
 
     // Dialog state
     let addMemberDialogOpen = $state(false);
+
+    // PDF download state
+    let isDownloadingPDF = $state(false);
 
     // Get available seasons
     const seasons = getSeasons();
@@ -47,6 +57,24 @@
             await loadMembers(true, selectedSeasonValue || undefined);
         } catch (error) {
             console.error("Failed to refresh members:", error);
+        }
+    }
+
+    async function handleDownloadPDF() {
+        if (!selectedSeason) {
+            // TODO: Show error toast - need to select a season
+            console.error("Please select a season to download PDF");
+            return;
+        }
+
+        isDownloadingPDF = true;
+        try {
+            await downloadMemberListPDF(selectedSeason.id);
+        } catch (error) {
+            console.error("Failed to download PDF:", error);
+            // TODO: Show error toast
+        } finally {
+            isDownloadingPDF = false;
         }
     }
 
@@ -138,6 +166,20 @@
                         <Button onclick={() => (addMemberDialogOpen = true)}>
                             <UserPlus class="h-4 w-4 mr-2" />
                             Aggiungi Socio
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onclick={handleDownloadPDF}
+                            disabled={!selectedSeason || isDownloadingPDF}
+                        >
+                            <FileText
+                                class={isDownloadingPDF
+                                    ? "h-4 w-4 mr-2 animate-pulse"
+                                    : "h-4 w-4 mr-2"}
+                            />
+                            {isDownloadingPDF
+                                ? "Generazione..."
+                                : "Scarica PDF"}
                         </Button>
                         <Button
                             variant="outline"

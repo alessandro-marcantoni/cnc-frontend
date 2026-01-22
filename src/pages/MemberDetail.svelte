@@ -8,6 +8,7 @@
         CircleAlert,
         ArrowLeft,
         Calendar,
+        FileText,
     } from "@lucide/svelte";
 
     // Import extracted components
@@ -26,7 +27,11 @@
         isLoadingMemberDetail,
         memberDetailError,
     } from "$lib/data/repositories/member-detail-repository";
-    import { addMembership, freeFacility } from "$lib/data/api";
+    import {
+        addMembership,
+        freeFacility,
+        downloadMemberDetailPDF,
+    } from "$lib/data/api";
     import {
         loadRentedFacilities,
         rentedFacilities,
@@ -128,6 +133,9 @@
     let isFreeDialogOpen = $state(false);
     let selectedRentedFacility = $state<RentedFacility | null>(null);
 
+    // PDF download state
+    let isDownloadingPDF = $state(false);
+
     // Load facility catalog on mount
     onMount(() => {
         loadFacilitiesCatalog();
@@ -181,6 +189,23 @@
     function goBack() {
         window.history.pushState({}, "", "/");
         window.dispatchEvent(new PopStateEvent("popstate"));
+    }
+
+    async function handleDownloadPDF() {
+        if (!selectedSeason) {
+            console.error("No season selected");
+            return;
+        }
+
+        isDownloadingPDF = true;
+        try {
+            await downloadMemberDetailPDF(memberId, selectedSeason.id);
+        } catch (error) {
+            console.error("Failed to download PDF:", error);
+            // TODO: Show error toast
+        } finally {
+            isDownloadingPDF = false;
+        }
     }
 
     // Rent facility dialog functions
@@ -361,6 +386,18 @@
                         </span>
                     {/if}
                 </div>
+                <Button
+                    variant="outline"
+                    onclick={handleDownloadPDF}
+                    disabled={!selectedSeason || isDownloadingPDF}
+                >
+                    <FileText
+                        class={isDownloadingPDF
+                            ? "h-4 w-4 mr-2 animate-pulse"
+                            : "h-4 w-4 mr-2"}
+                    />
+                    {isDownloadingPDF ? "Generazione..." : "Scarica PDF"}
+                </Button>
                 <Button
                     variant="outline"
                     onclick={handleRefresh}

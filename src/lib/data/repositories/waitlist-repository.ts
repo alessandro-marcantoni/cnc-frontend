@@ -58,8 +58,7 @@ export async function loadWaitlist(
 
   try {
     // First ensure we have members loaded
-    const currentSeason = getCurrentSeason();
-    await loadMembers(false, currentSeason.id);
+    await loadMembers(false, undefined);
     const members = get(membersStore);
 
     // Fetch waitlist with member details
