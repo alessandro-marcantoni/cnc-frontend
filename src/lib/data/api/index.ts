@@ -4,6 +4,7 @@ export {
   fetchRentedFacilities,
   fetchFacilitiesCatalog,
   fetchFacilitiesByType,
+  freeFacility,
 } from "./facilities-api";
 export { createMember } from "./create-member-api";
 export type { CreateMemberRequest } from "./create-member-api";

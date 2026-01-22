@@ -235,3 +235,36 @@ export async function getSuggestedPrice(
   const data = await response.json();
   return data;
 }
+
+/**
+ * Free a rented facility (soft delete)
+ * @param rentedFacilityId - The ID of the rented facility to free
+ * @returns Success status
+ */
+export async function freeFacility(
+  rentedFacilityId: number,
+): Promise<{ success: boolean }> {
+  const response = await apiFetch(
+    `/api/v1.0/facilities/rented/${rentedFacilityId}`,
+    {
+      method: "DELETE",
+    },
+  );
+
+  if (!response.ok) {
+    // Try to parse error message from response
+    let errorMessage = `Failed to free facility: ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      if (errorData.error) {
+        errorMessage = errorData.error;
+      }
+    } catch {
+      // If parsing fails, use the default message
+    }
+    throw new Error(errorMessage);
+  }
+
+  const data = await response.json();
+  return data;
+}

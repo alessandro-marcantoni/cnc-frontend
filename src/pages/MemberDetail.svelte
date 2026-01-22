@@ -26,7 +26,7 @@
         isLoadingMemberDetail,
         memberDetailError,
     } from "$lib/data/repositories/member-detail-repository";
-    import { addMembership } from "$lib/data/api";
+    import { addMembership, freeFacility } from "$lib/data/api";
     import {
         loadRentedFacilities,
         rentedFacilities,
@@ -201,17 +201,22 @@
         isFreeDialogOpen = true;
     }
 
-    function handleFreeFacility() {
+    async function handleFreeFacility() {
         if (!selectedRentedFacility) return;
 
-        // TODO: Implement free facility logic here
-        // Also refresh the facilities by type
-        console.log("Free facility:", {
-            rentalId: selectedRentedFacility.id,
-            facilityId: selectedRentedFacility.facilityId,
-        });
+        try {
+            // Call the API to free the facility (soft delete)
+            await freeFacility(selectedRentedFacility.id);
 
-        isFreeDialogOpen = false;
+            // Close the dialog
+            isFreeDialogOpen = false;
+
+            // Refresh the data to reflect the change
+            await handleRefresh();
+        } catch (error) {
+            console.error("Failed to free facility:", error);
+            // You might want to show an error toast/notification here
+        }
     }
 
     // Renew membership functions
