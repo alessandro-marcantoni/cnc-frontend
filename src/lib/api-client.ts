@@ -38,15 +38,15 @@ export async function apiFetch(
   url: string,
   options: RequestInit = {},
 ): Promise<Response> {
-  const token = await getAuthToken();
+  // const token = await getAuthToken();
 
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string>),
   };
 
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
+  // if (token) {
+  //   headers["Authorization"] = `Bearer ${token}`;
+  // }
 
   const fullUrl = url.startsWith("http") ? url : `${API_BASE_URL}${url}`;
 

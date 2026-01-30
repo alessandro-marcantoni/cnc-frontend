@@ -10,7 +10,6 @@ import Members from "./pages/Members.svelte";
 import FacilityTypeDetail from "./pages/FacilityTypeDetail.svelte";
 import FacilityTypeWaitlist from "./pages/FacilityTypeWaitlist.svelte";
 import Login from "./pages/Login.svelte";
-import { getAuthToken } from "$lib/api-client";
 
 const openPaths: string[] = ["/login"];
 
@@ -67,16 +66,16 @@ export const routes: RouteConfig[] = [
 ];
 
 async function homeGuard(route: RouteResult): Promise<boolean> {
-  const path = route.route?.path?.toString();
-  if (!path) {
-    goto("/login");
-    return false;
-  }
-  if (openPaths.includes(path)) return true;
-  const token = await getAuthToken();
-  if (!token) {
-    goto("/login");
-    return false;
-  }
+  // const path = route.route?.path?.toString();
+  // if (!path) {
+  //   goto("/login");
+  //   return false;
+  // }
+  // if (openPaths.includes(path)) return true;
+  // const token = await getAuthToken();
+  // if (!token) {
+  //   goto("/login");
+  //   return false;
+  // }
   return true;
 }
