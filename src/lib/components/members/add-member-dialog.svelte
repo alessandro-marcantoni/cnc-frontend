@@ -7,7 +7,7 @@
     import * as Select from "$lib/components/ui/select";
     import DatePicker from "$lib/components/ui/date-picker.svelte";
     import { Separator } from "$lib/components/ui/separator";
-    import PhoneInput from "$lib/components/ui/phone-input/phone-input.svelte";
+
     import * as InputGroup from "$lib/components/ui/input-group";
     import {
         UserPlus,
@@ -15,8 +15,6 @@
         Trash2,
         MapPin,
         Phone,
-        Smartphone,
-        House,
         ChevronRight,
         ChevronLeft,
         Check,
@@ -25,10 +23,7 @@
         LoaderCircle,
     } from "@lucide/svelte";
     import type { CalendarDate } from "@internationalized/date";
-    import type {
-        E164Number,
-        CountryCode,
-    } from "$lib/components/ui/phone-input/types";
+
     import { getSeasons } from "$lib/data/repositories/seasons-repository";
     import { createMember, type CreateMemberRequest } from "$lib/data/api";
 
@@ -87,10 +82,7 @@
 
     // Phone number type
     type PhoneNumberEntry = {
-        type: "mobile" | "landline";
-        mobileNumber: E164Number | null;
-        mobileCountry: CountryCode | null;
-        landlineNumber: string;
+        number: string;
     };
 
     let addresses = $state<Address[]>([
@@ -99,10 +91,7 @@
 
     let phoneNumbers = $state<PhoneNumberEntry[]>([
         {
-            type: "mobile",
-            mobileNumber: null,
-            mobileCountry: "IT",
-            landlineNumber: "",
+            number: "",
         },
     ]);
 
@@ -121,10 +110,7 @@
         phoneNumbers = [
             ...phoneNumbers,
             {
-                type: "mobile",
-                mobileNumber: null,
-                mobileCountry: "IT",
-                landlineNumber: "",
+                number: "",
             },
         ];
     }
@@ -151,10 +137,7 @@
 
         phoneNumbers = [
             {
-                type: "mobile",
-                mobileNumber: null,
-                mobileCountry: "IT",
-                landlineNumber: "",
+                number: "",
             },
         ];
     }
@@ -180,37 +163,10 @@
 
             // Prepare phone numbers for API
             const apiPhoneNumbers = phoneNumbers
-                .filter((phone) => {
-                    if (phone.type === "mobile") {
-                        return phone.mobileNumber && phone.mobileCountry;
-                    } else {
-                        return phone.landlineNumber.trim() !== "";
-                    }
-                })
-                .map((phone) => {
-                    if (phone.type === "mobile") {
-                        // Extract prefix and number from E164 format
-                        const fullNumber = phone.mobileNumber || "";
-                        // E164 format is like +39123456789
-                        // We need to split it into prefix (+39) and number (123456789)
-                        const match = fullNumber.match(/^(\+\d+)(.+)$/);
-                        if (match) {
-                            return {
-                                prefix: match[1], // e.g., "+39"
-                                number: match[2], // e.g., "123456789"
-                            };
-                        }
-                        return {
-                            prefix: "",
-                            number: fullNumber,
-                        };
-                    } else {
-                        return {
-                            prefix: "",
-                            number: phone.landlineNumber,
-                        };
-                    }
-                });
+                .filter((phone) => phone.number.trim() !== "")
+                .map((phone) => ({
+                    number: phone.number,
+                }));
 
             // Prepare addresses for API
             const apiAddresses = addresses
@@ -289,12 +245,7 @@
 
     const isStep3Valid = $derived(
         phoneNumbers.length > 0 &&
-            phoneNumbers.every(
-                (phone) =>
-                    (phone.type === "mobile" && phone.mobileNumber !== null) ||
-                    (phone.type === "landline" &&
-                        phone.landlineNumber.trim() !== ""),
-            ),
+            phoneNumbers.every((phone) => phone.number.trim() !== ""),
     );
 
     const isStep4Valid = $derived(
@@ -589,76 +540,16 @@
                             {/if}
 
                             <div class="space-y-2">
-                                <Label for="phone-type-{index}">Tipo *</Label>
-                                <Select.Root
-                                    type="single"
-                                    bind:value={phone.type}
+                                <Label for="phone-number-{index}"
+                                    >Numero di Telefono *</Label
                                 >
-                                    <Select.Trigger
-                                        id="phone-type-{index}"
-                                        class="w-full"
-                                    >
-                                        {#if phone.type === "mobile"}
-                                            <span
-                                                class="flex items-center gap-2"
-                                            >
-                                                <Smartphone class="h-4 w-4" />
-                                                Cellulare
-                                            </span>
-                                        {:else}
-                                            <span
-                                                class="flex items-center gap-2"
-                                            >
-                                                <House class="h-4 w-4" />
-                                                Fisso
-                                            </span>
-                                        {/if}
-                                    </Select.Trigger>
-                                    <Select.Content>
-                                        <Select.Item value="mobile">
-                                            <span
-                                                class="flex items-center gap-2"
-                                            >
-                                                <Smartphone class="h-4 w-4" />
-                                                Cellulare
-                                            </span>
-                                        </Select.Item>
-                                        <Select.Item value="landline">
-                                            <span
-                                                class="flex items-center gap-2"
-                                            >
-                                                <House class="h-4 w-4" />
-                                                Fisso
-                                            </span>
-                                        </Select.Item>
-                                    </Select.Content>
-                                </Select.Root>
+                                <Input
+                                    id="phone-number-{index}"
+                                    bind:value={phone.number}
+                                    placeholder="333 123 4567"
+                                    required
+                                />
                             </div>
-
-                            {#if phone.type === "mobile"}
-                                <div class="space-y-2">
-                                    <Label for="mobile-number-{index}"
-                                        >Numero di Cellulare *</Label
-                                    >
-                                    <PhoneInput
-                                        placeholder="333 123 4567"
-                                        bind:country={phone.mobileCountry}
-                                        bind:value={phone.mobileNumber}
-                                    />
-                                </div>
-                            {:else}
-                                <div class="space-y-2">
-                                    <Label for="landline-number-{index}"
-                                        >Numero Fisso *</Label
-                                    >
-                                    <Input
-                                        id="landline-number-{index}"
-                                        bind:value={phone.landlineNumber}
-                                        placeholder="06 1234 5678"
-                                        required
-                                    />
-                                </div>
-                            {/if}
                         </div>
                     {/each}
                 </div>

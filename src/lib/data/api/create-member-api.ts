@@ -13,7 +13,6 @@ export interface CreateMemberRequest {
   birthDate: string; // ISO date string (YYYY-MM-DD)
   email: string;
   phoneNumbers: Array<{
-    prefix: string;
     number: string;
   }>;
   addresses: Array<{
@@ -35,7 +34,6 @@ export interface CreateMemberResponse {
   email: string;
   birthDate: string;
   phoneNumbers: Array<{
-    prefix: string;
     number: string;
   }>;
   addresses: Array<{
@@ -110,7 +108,7 @@ export async function createMember(
       number: address.streetNumber,
     })),
     phoneNumbers: data.phoneNumbers.map((phone) => ({
-      number: `${phone.prefix}${phone.number}`,
+      number: phone.number,
     })),
     memberships: data.memberships.map((membership) => ({
       id: membership.id,
