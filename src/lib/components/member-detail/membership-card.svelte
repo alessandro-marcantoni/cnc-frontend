@@ -121,11 +121,11 @@
                         class="px-2"
                     >
                         {#if currentMembership.payment}
-                            <Pencil class="h-3 w-3 mr-1" />
-                            Modifica
+                            <Euro class="h-3 w-3 mr-1" />
+                            Modifica Pagamento
                         {:else}
-                            <Plus class="h-3 w-3 mr-1" />
-                            Aggiungi
+                            <Euro class="h-3 w-3 mr-1" />
+                            Aggiungi Pagamento
                         {/if}
                     </Button>
                 </div>

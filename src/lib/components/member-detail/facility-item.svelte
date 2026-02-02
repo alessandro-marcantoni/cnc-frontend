@@ -83,8 +83,8 @@
                 size="sm"
                 onclick={() => onEditPayment(facility)}
             >
-                <Pencil class="h-4 w-4 mr-2" />
-                {facility.payment ? "Modifica" : "Pagamento"}
+                <Euro class="h-4 w-4 mr-2" />
+                {facility.payment ? "Modifica Pagamento" : "Pagamento"}
             </Button>
             <Button
                 variant="destructive"
