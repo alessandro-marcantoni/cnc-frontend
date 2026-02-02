@@ -12,4 +12,7 @@ export default defineConfig({
       $model: path.resolve("./src/model"),
     },
   },
+  build: {
+    assetsDir: "assets",
+  },
 });
