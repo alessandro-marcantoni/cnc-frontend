@@ -31,7 +31,12 @@
 
     // State
     let searchQuery = $state("");
-    let statusFilter = $state<MembershipStatus[]>(["ACTIVE", "EXPIRED"]);
+    let statusFilter = $state<MembershipStatus[]>([
+        "ACTIVE",
+        "EXPIRED",
+        "EXCLUDED",
+        "NONE",
+    ]);
     let sortColumn = $state<string | null>(null);
     let sortDirection = $state<"asc" | "desc">("asc");
     let currentPage = $state(0);
