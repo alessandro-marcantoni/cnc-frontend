@@ -86,7 +86,7 @@
     };
 
     let addresses = $state<Address[]>([
-        { country: "", city: "", street: "", number: "", zipCode: "" },
+        { country: "Italia", city: "", street: "", number: "", zipCode: "" },
     ]);
 
     let phoneNumbers = $state<PhoneNumberEntry[]>([
@@ -98,7 +98,13 @@
     function addAddress() {
         addresses = [
             ...addresses,
-            { country: "", city: "", street: "", number: "", zipCode: "" },
+            {
+                country: "Italia",
+                city: "",
+                street: "",
+                number: "",
+                zipCode: "",
+            },
         ];
     }
 
@@ -113,6 +119,67 @@
                 number: "",
             },
         ];
+    }
+
+    function formatPhoneNumber(value: string): string {
+        // Remove all spaces first
+        const cleaned = value.replace(/\s/g, "");
+
+        // Check if it starts with a prefix (e.g., +39, +1, etc.)
+        if (cleaned.startsWith("+")) {
+            let prefix = "";
+
+            if (cleaned.length === 1) {
+                // Just the plus sign
+                prefix = "+";
+            } else if (cleaned.length === 2) {
+                // e.g., "+3" or "+1" (still typing)
+                prefix = cleaned;
+            } else {
+                // Length >= 3, need to detect country code length
+                // Check if first digit after + is 1 (1-digit country codes: +1 for USA/Canada)
+                const firstDigit = cleaned[1];
+                if (firstDigit === "1") {
+                    // 1-digit country code
+                    prefix = cleaned.slice(0, 2); // "+1"
+                } else {
+                    // 2-digit country code (most common: +39, +44, +33, +49, etc.)
+                    prefix = cleaned.slice(0, 3); // "+39", "+44", etc.
+                }
+            }
+
+            const rest = cleaned.slice(prefix.length);
+            return rest ? `${prefix} ${rest}` : prefix;
+        } else if (cleaned.length > 3) {
+            // No prefix: add space after third digit
+            return `${cleaned.slice(0, 3)} ${cleaned.slice(3)}`;
+        }
+
+        return cleaned;
+    }
+
+    function handlePhoneInput(index: number, event: Event) {
+        const input = event.target as HTMLInputElement;
+        const cursorPosition = input.selectionStart || 0;
+        const oldValue = phoneNumbers[index].number;
+        const newValue = input.value;
+
+        // Format the phone number
+        const formatted = formatPhoneNumber(newValue);
+        phoneNumbers[index].number = formatted;
+
+        // Adjust cursor position if a space was added
+        if (formatted.length > newValue.length) {
+            // Space was added, move cursor forward
+            requestAnimationFrame(() => {
+                input.setSelectionRange(cursorPosition + 1, cursorPosition + 1);
+            });
+        } else if (formatted.length < oldValue.length && cursorPosition > 0) {
+            // Space might have been removed, adjust cursor
+            requestAnimationFrame(() => {
+                input.setSelectionRange(cursorPosition, cursorPosition);
+            });
+        }
     }
 
     function removePhoneNumber(index: number) {
@@ -132,7 +199,13 @@
         isSubmitting = false;
 
         addresses = [
-            { country: "", city: "", street: "", number: "", zipCode: "" },
+            {
+                country: "Italia",
+                city: "",
+                street: "",
+                number: "",
+                zipCode: "",
+            },
         ];
 
         phoneNumbers = [
@@ -546,7 +619,8 @@
                                 <Input
                                     id="phone-number-{index}"
                                     bind:value={phone.number}
-                                    placeholder="333 123 4567"
+                                    oninput={(e) => handlePhoneInput(index, e)}
+                                    placeholder="+39 333 1234567 or 333 1234567"
                                     required
                                 />
                             </div>
