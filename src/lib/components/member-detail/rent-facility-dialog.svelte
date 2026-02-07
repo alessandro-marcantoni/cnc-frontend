@@ -9,7 +9,6 @@
     import { Label } from "$lib/components/ui/label";
     import { Badge } from "$lib/components/ui/badge";
     import { Input } from "$lib/components/ui/input";
-    import Calendar from "$lib/components/ui/calendar/calendar.svelte";
     import WaitlistAlert from "$lib/components/waitlist/waitlist-alert.svelte";
     import JoinWaitlistDialog from "$lib/components/waitlist/join-waitlist-dialog.svelte";
     import { addToWaitlist } from "$lib/data/api";
@@ -664,6 +663,7 @@
                             </label>
                             <Select.Root
                                 type="single"
+                                value={selectedFacilityId?.toString() ?? ""}
                                 onValueChange={(value) => {
                                     selectedFacilityId = value
                                         ? parseInt(value)
