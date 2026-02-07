@@ -49,6 +49,7 @@
     import {
         loadFacilitiesByType,
         facilitiesByType,
+        clearFacilitiesByTypeCache,
     } from "$lib/data/repositories/facilities-by-type-repository";
     import type { Season } from "$model/shared/season";
     import type { RentedFacility } from "$model/facilities/rented-facility";
@@ -148,6 +149,7 @@
 
         try {
             const season = parseInt(selectedSeasonValue) || undefined;
+            console.log("Refreshing data for season", season);
             await Promise.all([
                 loadMemberDetail(memberId, true, season),
                 loadRentedFacilities(memberId, true, season),
@@ -232,6 +234,9 @@
         try {
             // Call the API to free the facility (soft delete)
             await freeFacility(selectedRentedFacility.id);
+
+            // Clear the facilities-by-type cache since the facility is now available
+            clearFacilitiesByTypeCache();
 
             // Close the dialog
             isFreeDialogOpen = false;

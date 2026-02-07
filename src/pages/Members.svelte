@@ -20,6 +20,7 @@
         isLoadingMembers,
         membersError,
         loadMembers,
+        clearMembersCache,
     } from "$lib/data/repositories/members-repository";
     import {
         getSeasons,
@@ -54,6 +55,7 @@
     async function handleRefresh() {
         try {
             // Pass season ID (or undefined for all seasons)
+            clearMembersCache();
             await loadMembers(true, selectedSeasonValue || undefined);
         } catch (error) {
             console.error("Failed to refresh members:", error);
