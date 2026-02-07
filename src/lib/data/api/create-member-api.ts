@@ -11,7 +11,8 @@ export interface CreateMemberRequest {
   firstName: string;
   lastName: string;
   birthDate: string; // ISO date string (YYYY-MM-DD)
-  email: string;
+  email?: string;
+  taxCode?: string;
   phoneNumbers: Array<{
     number: string;
   }>;
@@ -31,7 +32,8 @@ export interface CreateMemberResponse {
   id: number;
   firstName: string;
   lastName: string;
-  email: string;
+  email?: string;
+  taxCode?: string;
   birthDate: string;
   phoneNumbers: Array<{
     number: string;
@@ -99,6 +101,7 @@ export async function createMember(
     firstName: data.firstName,
     lastName: data.lastName,
     email: data.email,
+    taxCode: data.taxCode,
     birthDate: parseDate(data.birthDate),
     addresses: data.addresses.map((address) => ({
       country: address.country,

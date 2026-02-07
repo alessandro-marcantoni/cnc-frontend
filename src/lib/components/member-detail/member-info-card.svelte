@@ -1,7 +1,14 @@
 <script lang="ts">
     import * as Card from "$lib/components/ui/card";
     import { Separator } from "$lib/components/ui/separator";
-    import { User, Mail, Calendar, Phone, MapPin } from "@lucide/svelte";
+    import {
+        User,
+        Mail,
+        Calendar,
+        Phone,
+        MapPin,
+        CreditCard,
+    } from "@lucide/svelte";
     import { formatDate } from "$model/shared/date-utils";
     import type { MemberDetail } from "$model/members/member-detail";
     import {
@@ -36,17 +43,34 @@
     </Card.Header>
     <Card.Content class="space-y-4">
         <!-- Email -->
-        <div>
-            <div class="flex items-center gap-2 mb-1">
-                <Mail class="h-4 w-4 text-muted-foreground" />
-                <span class="text-sm font-medium text-muted-foreground"
-                    >Email</span
-                >
+        {#if member.email}
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <Mail class="h-4 w-4 text-muted-foreground" />
+                    <span class="text-sm font-medium text-muted-foreground"
+                        >Email</span
+                    >
+                </div>
+                <p class="text-sm">{member.email}</p>
             </div>
-            <p class="text-sm">{member.email}</p>
-        </div>
 
-        <Separator />
+            <Separator />
+        {/if}
+
+        <!-- Tax Code -->
+        {#if member.taxCode}
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <CreditCard class="h-4 w-4 text-muted-foreground" />
+                    <span class="text-sm font-medium text-muted-foreground"
+                        >Codice Fiscale</span
+                    >
+                </div>
+                <p class="text-sm font-mono uppercase">{member.taxCode}</p>
+            </div>
+
+            <Separator />
+        {/if}
 
         <!-- Birth Date -->
         <div>

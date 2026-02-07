@@ -33,6 +33,7 @@ export async function fetchMemberDetail(
     firstName: data.firstName,
     lastName: data.lastName,
     email: data.email,
+    taxCode: data.taxCode,
     birthDate: parseDate(data.birthDate),
     addresses: data.addresses.map((address: any) => ({
       country: address.country,

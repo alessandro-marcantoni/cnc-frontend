@@ -58,6 +58,7 @@
     let firstName = $state("");
     let lastName = $state("");
     let email = $state("");
+    let taxCode = $state("");
     let birthDate = $state<CalendarDate | undefined>(undefined);
 
     // Membership state
@@ -190,12 +191,13 @@
         firstName = "";
         lastName = "";
         email = "";
+        taxCode = "";
         birthDate = undefined;
         currentStep = 1;
+        errorMessage = null;
         addMembershipNow = false;
         selectedSeason = undefined;
         membershipPrice = 130.0;
-        errorMessage = null;
         isSubmitting = false;
 
         addresses = [
@@ -261,8 +263,9 @@
             const request: CreateMemberRequest = {
                 firstName,
                 lastName,
-                email,
-                birthDate: birthDate.toString(), // Format: YYYY-MM-DD
+                email: email.trim() || undefined,
+                taxCode: taxCode.trim() || undefined,
+                birthDate: birthDate.toString(),
                 phoneNumbers: apiPhoneNumbers,
                 addresses: apiAddresses,
                 createMembership: addMembershipNow,
@@ -300,7 +303,6 @@
     const isStep1Valid = $derived(
         firstName.trim() !== "" &&
             lastName.trim() !== "" &&
-            email.trim() !== "" &&
             birthDate !== undefined,
     );
 
@@ -465,13 +467,23 @@
                     </div>
 
                     <div class="space-y-2">
-                        <Label for="email">Email *</Label>
+                        <Label for="email">Email</Label>
                         <Input
                             id="email"
                             type="email"
                             bind:value={email}
                             placeholder="mario.rossi@example.com"
-                            required
+                        />
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label for="taxCode">Codice Fiscale (opzionale)</Label>
+                        <Input
+                            id="taxCode"
+                            type="text"
+                            bind:value={taxCode}
+                            placeholder="RSSMRA80A01H501U"
+                            maxlength={16}
                         />
                     </div>
 

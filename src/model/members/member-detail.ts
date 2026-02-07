@@ -6,7 +6,8 @@ export type MemberDetail = {
   firstName: string;
   lastName: string;
   birthDate: DateValue;
-  email: string;
+  email?: string;
+  taxCode?: string;
   addresses: Address[];
   phoneNumbers: PhoneNumber[];
   memberships: Membership[];
