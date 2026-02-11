@@ -13,6 +13,7 @@
         UpdatePaymentRequest,
     } from "$lib/data/api";
     import type { CalendarDate, DateValue } from "@internationalized/date";
+    import ScrollArea from "../ui/scroll-area/scroll-area.svelte";
 
     interface BasePayment {
         id?: number;
@@ -234,6 +235,7 @@
                             <Select.Item value="Carta">Carta</Select.Item>
                             <Select.Item value="Bonifico">Bonifico</Select.Item>
                             <Select.Item value="Assegno">Assegno</Select.Item>
+                            <Select.Item value="Omaggio">Omaggio</Select.Item>
                             <Select.Item value="Altro">Altro</Select.Item>
                         </Select.Group>
                     </Select.Content>
