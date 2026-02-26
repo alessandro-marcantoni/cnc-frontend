@@ -467,7 +467,7 @@
                     </div>
 
                     <div class="space-y-2">
-                        <Label for="email">Email</Label>
+                        <Label for="email">Email (opzionale)</Label>
                         <Input
                             id="email"
                             type="email"
