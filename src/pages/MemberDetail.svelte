@@ -149,7 +149,6 @@
 
         try {
             const season = parseInt(selectedSeasonValue) || undefined;
-            console.log("Refreshing data for season", season);
             await Promise.all([
                 loadMemberDetail(memberId, true, season),
                 loadRentedFacilities(memberId, true, season),
@@ -189,7 +188,9 @@
     });
 
     function goBack() {
-        window.history.pushState({}, "", "/");
+        const season = getQueryParam("season");
+        const url = season ? `/members?season=${season}` : "/members";
+        window.history.pushState({}, "", url);
         window.dispatchEvent(new PopStateEvent("popstate"));
     }
 

@@ -8,6 +8,7 @@
     import type { Member } from "$model/members/member";
     import { getLocalTimeZone, type DateValue } from "@internationalized/date";
     import { goto } from "@mateothegreat/svelte5-router";
+    import { getQueryParam } from "$lib/utils/query-params";
 
     type PaymentStatus = "PAID" | "UNPAID";
 
@@ -176,7 +177,11 @@
     }
 
     function navigateToMember(memberId: number) {
-        goto(`/members/${memberId}`);
+        const season = getQueryParam("season");
+        const url = season
+            ? `/members/${memberId}?season=${season}`
+            : `/members/${memberId}`;
+        goto(url);
     }
 
     // Reset to first page when search query or payment filter changes

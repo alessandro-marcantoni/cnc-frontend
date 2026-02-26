@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Sailboat, Settings, UserPlus } from "@lucide/svelte";
     import Button from "$lib/components/ui/button/button.svelte";
+    import { getQueryParam } from "$lib/utils/query-params";
 
     // Get current path for active state
     let currentPath = $state(window.location.pathname);
@@ -13,7 +14,15 @@
     }
 
     function navigate(path: string) {
-        window.history.pushState({}, "", path);
+        // Preserve season query parameter when navigating to members
+        let url = path;
+        if (path === "/members") {
+            const season = getQueryParam("season");
+            if (season) {
+                url = `/members?season=${season}`;
+            }
+        }
+        window.history.pushState({}, "", url);
         currentPath = path;
         window.dispatchEvent(new PopStateEvent("popstate"));
     }

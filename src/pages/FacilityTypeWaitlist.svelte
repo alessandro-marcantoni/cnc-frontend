@@ -2,6 +2,7 @@
     import { onMount } from "svelte";
     import { goto } from "@mateothegreat/svelte5-router";
     import Header from "$lib/components/shared/header.svelte";
+    import { getQueryParam } from "$lib/utils/query-params";
     import * as Card from "$lib/components/ui/card";
     import * as Table from "$lib/components/ui/table";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
@@ -156,7 +157,11 @@
     }
 
     function viewMemberDetail(memberId: number) {
-        goto(`/members/${memberId}`);
+        const season = getQueryParam("season");
+        const url = season
+            ? `/members/${memberId}?season=${season}`
+            : `/members/${memberId}`;
+        goto(url);
     }
 
     function clearSearch() {
