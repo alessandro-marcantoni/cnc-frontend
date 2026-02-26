@@ -98,6 +98,11 @@
     let insuranceNumber = $state("");
     let insuranceExpiresAt = $state<CalendarDate | undefined>(undefined);
 
+    // Leerboard state
+    let leerboardColor = $state("");
+    let leerboardType = $state("");
+    let leerboardLengthMeters = $state("");
+
     // Load members and facility types on mount
     onMount(() => {
         loadMembers();
@@ -111,6 +116,15 @@
             (ft) => ft.id === selectedFacility!.facilityTypeId,
         );
         return facilityType?.hasBoat === true;
+    });
+
+    // Check if selected facility type requires leerboard info
+    const requiresLeerboard = $derived(() => {
+        if (!selectedFacility) return false;
+        const facilityType = $facilitiesCatalog.find(
+            (ft) => ft.id === selectedFacility!.facilityTypeId,
+        );
+        return facilityType?.hasLeerboard === true;
     });
 
     // Validate boat information
@@ -130,6 +144,16 @@
             insuranceExpiresAt !== undefined;
 
         return hasValidBoatInfo && hasValidInsurance;
+    });
+
+    // Validate leerboard information
+    const isLeerboardInfoValid = $derived(() => {
+        if (!requiresLeerboard()) return true;
+
+        return (
+            leerboardLengthMeters !== "" &&
+            parseFloat(leerboardLengthMeters) > 0
+        );
     });
 
     // Get facility status
@@ -248,6 +272,11 @@
         insuranceNumber = "";
         insuranceExpiresAt = undefined;
 
+        // Reset leerboard fields
+        leerboardColor = "";
+        leerboardType = "";
+        leerboardLengthMeters = "";
+
         // Set default price from facility
         bookingPrice = facility.suggestedPrice.toString();
 
@@ -279,7 +308,7 @@
 
     async function handleBookingSubmit() {
         if (!selectedFacility || !selectedMemberId) return;
-        if (!isBoatInfoValid()) return;
+        if (!isBoatInfoValid() || !isLeerboardInfoValid()) return;
 
         isSubmitting = true;
         submitError = null;
@@ -306,6 +335,15 @@
                             : "",
                     },
                 ],
+            };
+        }
+
+        // Add leerboard info if facility type requires it
+        if (requiresLeerboard()) {
+            rentFacilityRequest.leerboardInfo = {
+                color: leerboardColor.trim() || undefined,
+                type: leerboardType.trim() || undefined,
+                lengthMeters: parseFloat(leerboardLengthMeters),
             };
         }
 
@@ -790,6 +828,59 @@
                 </div>
             {/if}
 
+            <!-- Leerboard Information (if facility type requires it) -->
+            {#if requiresLeerboard()}
+                <div class="grid gap-4">
+                    <div class="flex items-center gap-2">
+                        <Anchor class="h-5 w-5" />
+                        <h3 class="text-lg font-semibold">
+                            Informazioni Deriva
+                        </h3>
+                    </div>
+
+                    <div class="grid gap-4">
+                        <!-- Leerboard Length -->
+                        <div class="grid gap-2">
+                            <Label for="leerboard-length">
+                                Lunghezza (m)<span class="text-destructive"
+                                    >*</span
+                                >
+                            </Label>
+                            <Input
+                                id="leerboard-length"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                bind:value={leerboardLengthMeters}
+                                placeholder="0.00"
+                            />
+                        </div>
+
+                        <!-- Optional Fields -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="grid gap-2">
+                                <Label for="leerboard-color">Colore</Label>
+                                <Input
+                                    id="leerboard-color"
+                                    type="text"
+                                    bind:value={leerboardColor}
+                                    placeholder="Es. Bianco"
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="leerboard-type">Tipo</Label>
+                                <Input
+                                    id="leerboard-type"
+                                    type="text"
+                                    bind:value={leerboardType}
+                                    placeholder="Es. Centrale"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {/if}
+
             {#if suggestedPriceInfo && suggestedPriceInfo.applicableRules > 0}
                 <Alert.Root variant="default">
                     <AlertCircle class="h-4 w-4" />
@@ -834,6 +925,7 @@
                 disabled={!selectedMemberId ||
                     !bookingPrice ||
                     !isBoatInfoValid() ||
+                    !isLeerboardInfoValid() ||
                     isSubmitting}
             >
                 {#if isSubmitting}

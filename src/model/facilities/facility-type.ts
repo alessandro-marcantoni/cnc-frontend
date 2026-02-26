@@ -4,4 +4,5 @@ export type FacilityType = {
   description: string;
   suggestedPrice: number;
   hasBoat: boolean;
+  hasLeerboard: boolean;
 };

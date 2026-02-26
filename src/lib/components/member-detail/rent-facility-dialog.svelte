@@ -95,6 +95,11 @@
     let insuranceNumber = $state("");
     let insuranceExpiresAt = $state<CalendarDate | undefined>(undefined);
 
+    // Leerboard state
+    let leerboardColor = $state("");
+    let leerboardType = $state("");
+    let leerboardLengthMeters = $state("");
+
     // Multi-step form state
     let currentStep = $state(1);
 
@@ -340,8 +345,21 @@
         );
     });
 
+    const requiresLeerboard = $derived(() => {
+        if (isRenewMode && facilityToRenew) {
+            // In renew mode, check if the facility being renewed has leerboard info
+            return facilityToRenew.leerboardInfo !== null;
+        }
+        // In rent mode, check if selected facility type requires leerboard
+        return (
+            selectedFacilityType !== null &&
+            facilityTypes.find((ft) => ft.id === selectedFacilityType)
+                ?.hasLeerboard === true
+        );
+    });
+
     const isBoatInfoValid = $derived(() => {
-        if (!requiresBoat) return true;
+        if (!requiresBoat()) return true;
 
         const hasValidBoatInfo =
             boatName.trim() !== "" &&
@@ -358,7 +376,16 @@
         return hasValidBoatInfo && hasValidInsurance;
     });
 
-    const totalSteps = $derived(requiresBoat() ? 3 : 2);
+    const isLeerboardInfoValid = $derived(() => {
+        if (!requiresLeerboard()) return true;
+
+        return (
+            leerboardLengthMeters !== "" &&
+            parseFloat(leerboardLengthMeters) > 0
+        );
+    });
+
+    const totalSteps = $derived(requiresBoat() || requiresLeerboard() ? 3 : 2);
 
     const isStep1Valid = $derived(
         selectedSeason &&
@@ -370,7 +397,7 @@
 
     const isStep2Valid = $derived(price && parseFloat(price) > 0);
 
-    const isStep3Valid = $derived(isBoatInfoValid);
+    const isStep3Valid = $derived(isBoatInfoValid() && isLeerboardInfoValid());
 
     const canGoToNextStep = $derived(
         currentStep === 1
@@ -448,6 +475,15 @@
                                 : "",
                         },
                     ],
+                };
+            }
+
+            // Add leerboard info if facility type requires it
+            if (requiresLeerboard()) {
+                rentFacilityRequest.leerboardInfo = {
+                    color: leerboardColor.trim() || undefined,
+                    type: leerboardType.trim() || undefined,
+                    lengthMeters: parseFloat(leerboardLengthMeters),
                 };
             }
 
@@ -772,113 +808,168 @@
             {/if}
 
             <!-- Step 3: Boat Information (only if facility type requires it) -->
-            {#if currentStep === 3 && requiresBoat()}
-                <div class="grid gap-4">
-                    <div class="flex items-center gap-2">
-                        <Anchor class="h-5 w-5" />
-                        <h3 class="text-lg font-semibold">
-                            Informazioni Barca
-                        </h3>
-                    </div>
-
+            {#if currentStep === 3 && (requiresBoat() || requiresLeerboard())}
+                {#if requiresBoat()}
                     <div class="grid gap-4">
-                        <!-- Boat Name -->
-                        <div class="grid gap-2">
-                            <Label for="boat-name">
-                                Nome Barca<span class="text-destructive">*</span
-                                >
-                            </Label>
-                            <Input
-                                id="boat-name"
-                                type="text"
-                                bind:value={boatName}
-                                placeholder="Es. La Perla del Mare"
-                            />
+                        <div class="flex items-center gap-2">
+                            <Anchor class="h-5 w-5" />
+                            <h3 class="text-lg font-semibold">
+                                Informazioni Barca
+                            </h3>
                         </div>
 
-                        <!-- Boat Dimensions -->
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="grid gap-4">
+                            <!-- Boat Name -->
                             <div class="grid gap-2">
-                                <Label for="boat-length">
+                                <Label for="boat-name">
+                                    Nome Barca<span class="text-destructive"
+                                        >*</span
+                                    >
+                                </Label>
+                                <Input
+                                    id="boat-name"
+                                    type="text"
+                                    bind:value={boatName}
+                                    placeholder="Es. La Perla del Mare"
+                                />
+                            </div>
+
+                            <!-- Boat Dimensions -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="grid gap-2">
+                                    <Label for="boat-length">
+                                        Lunghezza (m)<span
+                                            class="text-destructive">*</span
+                                        >
+                                    </Label>
+                                    <Input
+                                        id="boat-length"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        bind:value={boatLengthMeters}
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                                <div class="grid gap-2">
+                                    <Label for="boat-width">
+                                        Larghezza (m)<span
+                                            class="text-destructive">*</span
+                                        >
+                                    </Label>
+                                    <Input
+                                        id="boat-width"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        bind:value={boatWidthMeters}
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                            </div>
+
+                            <!-- Insurance Information -->
+                            <div class="grid gap-3">
+                                <Label>
+                                    Assicurazione<span class="text-destructive"
+                                        >*</span
+                                    >
+                                </Label>
+
+                                <div class="grid gap-3 p-3 border rounded-lg">
+                                    <div class="grid gap-2">
+                                        <Label for="insurance-provider">
+                                            Compagnia Assicurativa<span
+                                                class="text-destructive">*</span
+                                            >
+                                        </Label>
+                                        <Input
+                                            id="insurance-provider"
+                                            type="text"
+                                            bind:value={insuranceProvider}
+                                            placeholder="Es. Generali"
+                                        />
+                                    </div>
+
+                                    <div class="grid gap-2">
+                                        <Label for="insurance-number">
+                                            Numero Polizza<span
+                                                class="text-destructive">*</span
+                                            >
+                                        </Label>
+                                        <Input
+                                            id="insurance-number"
+                                            type="text"
+                                            bind:value={insuranceNumber}
+                                            placeholder="Es. 123456789"
+                                        />
+                                    </div>
+
+                                    <div class="grid gap-2">
+                                        <DatePicker
+                                            id="insurance-expires"
+                                            label="Data Scadenza *"
+                                            bind:value={insuranceExpiresAt}
+                                            placeholder="Seleziona data"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {/if}
+
+                {#if requiresLeerboard()}
+                    <div class="grid gap-4">
+                        <div class="flex items-center gap-2">
+                            <Anchor class="h-5 w-5" />
+                            <h3 class="text-lg font-semibold">
+                                Informazioni Deriva
+                            </h3>
+                        </div>
+
+                        <div class="grid gap-4">
+                            <!-- Leerboard Length -->
+                            <div class="grid gap-2">
+                                <Label for="leerboard-length">
                                     Lunghezza (m)<span class="text-destructive"
                                         >*</span
                                     >
                                 </Label>
                                 <Input
-                                    id="boat-length"
+                                    id="leerboard-length"
                                     type="number"
                                     step="0.01"
                                     min="0"
-                                    bind:value={boatLengthMeters}
+                                    bind:value={leerboardLengthMeters}
                                     placeholder="0.00"
                                 />
                             </div>
-                            <div class="grid gap-2">
-                                <Label for="boat-width">
-                                    Larghezza (m)<span class="text-destructive"
-                                        >*</span
-                                    >
-                                </Label>
-                                <Input
-                                    id="boat-width"
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    bind:value={boatWidthMeters}
-                                    placeholder="0.00"
-                                />
-                            </div>
-                        </div>
 
-                        <!-- Insurance Information -->
-                        <div class="grid gap-3">
-                            <Label>
-                                Assicurazione<span class="text-destructive"
-                                    >*</span
-                                >
-                            </Label>
-
-                            <div class="grid gap-3 p-3 border rounded-lg">
+                            <!-- Optional Fields -->
+                            <div class="grid grid-cols-2 gap-4">
                                 <div class="grid gap-2">
-                                    <Label for="insurance-provider">
-                                        Compagnia Assicurativa<span
-                                            class="text-destructive">*</span
-                                        >
-                                    </Label>
+                                    <Label for="leerboard-color">Colore</Label>
                                     <Input
-                                        id="insurance-provider"
+                                        id="leerboard-color"
                                         type="text"
-                                        bind:value={insuranceProvider}
-                                        placeholder="Es. Generali"
+                                        bind:value={leerboardColor}
+                                        placeholder="Es. Bianco"
                                     />
                                 </div>
-
                                 <div class="grid gap-2">
-                                    <Label for="insurance-number">
-                                        Numero Polizza<span
-                                            class="text-destructive">*</span
-                                        >
-                                    </Label>
+                                    <Label for="leerboard-type">Tipo</Label>
                                     <Input
-                                        id="insurance-number"
+                                        id="leerboard-type"
                                         type="text"
-                                        bind:value={insuranceNumber}
-                                        placeholder="Es. 123456789"
-                                    />
-                                </div>
-
-                                <div class="grid gap-2">
-                                    <DatePicker
-                                        id="insurance-expires"
-                                        label="Data Scadenza *"
-                                        bind:value={insuranceExpiresAt}
-                                        placeholder="Seleziona data"
+                                        bind:value={leerboardType}
+                                        placeholder="Es. Centrale"
                                     />
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                {/if}
             {/if}
         </div>
 
@@ -933,7 +1024,7 @@
                                 : "Affitto in corso..."}
                         {:else if isRenewMode}
                             <RefreshCw class="h-4 w-4 mr-2" />
-                            Conferma Rinnovo
+                            Rinnova Servizio
                         {:else}
                             Conferma Affitto
                         {/if}

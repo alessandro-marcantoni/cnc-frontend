@@ -13,6 +13,7 @@
         CirclePlus,
         Euro,
         ShieldCheck,
+        Anchor,
     } from "@lucide/svelte";
     import type { RentedFacility } from "$model/facilities/rented-facility";
     import { formatDate } from "$model/shared/date-utils";
@@ -178,6 +179,39 @@
                     {/each}
                 </div>
             {/if}
+        </div>
+    {/if}
+
+    <!-- Leerboard Info -->
+    {#if facility.leerboardInfo}
+        <Separator class="my-4" />
+        <div class="bg-muted/50 rounded-lg p-3">
+            <div class="flex items-center gap-2 mb-3">
+                <Anchor class="h-4 w-4 text-muted-foreground" />
+                <span class="text-sm font-medium">Informazioni Deriva</span>
+            </div>
+            <div class="grid grid-cols-3 gap-3 text-sm">
+                <div>
+                    <p class="text-muted-foreground mb-1">Lunghezza</p>
+                    <p class="font-medium">
+                        {facility.leerboardInfo.lengthMeters}m
+                    </p>
+                </div>
+                {#if facility.leerboardInfo.color}
+                    <div>
+                        <p class="text-muted-foreground mb-1">Colore</p>
+                        <p class="font-medium">
+                            {facility.leerboardInfo.color}
+                        </p>
+                    </div>
+                {/if}
+                {#if facility.leerboardInfo.type}
+                    <div>
+                        <p class="text-muted-foreground mb-1">Tipo</p>
+                        <p class="font-medium">{facility.leerboardInfo.type}</p>
+                    </div>
+                {/if}
+            </div>
         </div>
     {/if}
 

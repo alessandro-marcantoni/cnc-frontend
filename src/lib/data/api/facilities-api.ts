@@ -1,5 +1,6 @@
 import type {
   BoatInfo,
+  LeerboardInfo,
   RentedFacility,
 } from "$model/facilities/rented-facility";
 import type { FacilityType } from "$model/facilities/facility-type";
@@ -25,6 +26,11 @@ export interface RentFacilityRequest {
       number: string;
       expiresAt: string; // ISO date string
     }>;
+  };
+  leerboardInfo?: {
+    color?: string;
+    type?: string;
+    lengthMeters: number;
   };
 }
 
@@ -57,6 +63,7 @@ export async function fetchFacilitiesCatalog(): Promise<FacilityType[]> {
     description: facility.description,
     suggestedPrice: facility.suggestedPrice,
     hasBoat: facility.hasBoat || false,
+    hasLeerboard: facility.hasLeerboard || false,
   }));
 
   return facilityTypes;
@@ -148,6 +155,13 @@ export async function fetchRentedFacilities(
           insurances: facility.boatInfo.insurances || [],
         }
       : null,
+    leerboardInfo: facility.leerboardInfo
+      ? {
+          color: facility.leerboardInfo.color,
+          type: facility.leerboardInfo.type,
+          lengthMeters: facility.leerboardInfo.lengthMeters,
+        }
+      : null,
   }));
 
   return rentedFacilities;
@@ -209,6 +223,13 @@ export async function rentFacility(
           name: data.boatInfo.name,
           lengthMeters: data.boatInfo.lengthMeters,
           widthMeters: data.boatInfo.widthMeters,
+        }
+      : null,
+    leerboardInfo: data.leerboardInfo
+      ? {
+          color: data.leerboardInfo.color,
+          type: data.leerboardInfo.type,
+          lengthMeters: data.leerboardInfo.lengthMeters,
         }
       : null,
   };

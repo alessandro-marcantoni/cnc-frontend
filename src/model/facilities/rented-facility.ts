@@ -14,6 +14,12 @@ export type BoatInfo = {
   insurances?: Insurance[];
 };
 
+export type LeerboardInfo = {
+  color?: string;
+  type?: string;
+  lengthMeters: number;
+};
+
 export type RentedFacility = {
   id: number;
   facilityId: number;
@@ -25,4 +31,5 @@ export type RentedFacility = {
   price: number;
   payment: Payment | null;
   boatInfo: BoatInfo | null;
+  leerboardInfo: LeerboardInfo | null;
 };
