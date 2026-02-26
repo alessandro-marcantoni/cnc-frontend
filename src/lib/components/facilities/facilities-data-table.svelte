@@ -94,6 +94,7 @@
     let boatName = $state("");
     let boatLengthMeters = $state("");
     let boatWidthMeters = $state("");
+    let boatEngineInfo = $state("");
     let insuranceProvider = $state("");
     let insuranceNumber = $state("");
     let insuranceExpiresAt = $state<CalendarDate | undefined>(undefined);
@@ -268,6 +269,7 @@
         boatName = "";
         boatLengthMeters = "";
         boatWidthMeters = "";
+        boatEngineInfo = "";
         insuranceProvider = "";
         insuranceNumber = "";
         insuranceExpiresAt = undefined;
@@ -326,6 +328,7 @@
                 name: boatName.trim(),
                 lengthMeters: parseFloat(boatLengthMeters),
                 widthMeters: parseFloat(boatWidthMeters),
+                engineInfo: boatEngineInfo.trim() || undefined,
                 insurances: [
                     {
                         provider: insuranceProvider.trim(),
@@ -775,6 +778,17 @@
                                     placeholder="0.00"
                                 />
                             </div>
+                        </div>
+
+                        <!-- Engine Information -->
+                        <div class="grid gap-2">
+                            <Label for="boat-engine">Informazioni Motore</Label>
+                            <Input
+                                id="boat-engine"
+                                type="text"
+                                bind:value={boatEngineInfo}
+                                placeholder="Es. Yamaha 40HP"
+                            />
                         </div>
 
                         <!-- Insurance Information -->

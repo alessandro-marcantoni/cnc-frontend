@@ -137,6 +137,18 @@
                 </div>
             </div>
 
+            <!-- Engine Info -->
+            {#if facility.boatInfo.engineInfo}
+                <div class="mt-3">
+                    <div class="text-sm">
+                        <p class="text-muted-foreground mb-1">Motore</p>
+                        <p class="font-medium">
+                            {facility.boatInfo.engineInfo}
+                        </p>
+                    </div>
+                </div>
+            {/if}
+
             <!-- Insurance Info -->
             {#if facility.boatInfo.insurances && facility.boatInfo.insurances.length > 0}
                 <Separator class="my-3" />

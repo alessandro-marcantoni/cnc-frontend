@@ -21,6 +21,7 @@ export interface RentFacilityRequest {
     name: string;
     lengthMeters: number;
     widthMeters: number;
+    engineInfo?: string;
     insurances: Array<{
       provider: string;
       number: string;
@@ -152,6 +153,7 @@ export async function fetchRentedFacilities(
           name: facility.boatInfo.name,
           lengthMeters: facility.boatInfo.lengthMeters,
           widthMeters: facility.boatInfo.widthMeters,
+          engineInfo: facility.boatInfo.engineInfo,
           insurances: facility.boatInfo.insurances || [],
         }
       : null,
@@ -223,6 +225,7 @@ export async function rentFacility(
           name: data.boatInfo.name,
           lengthMeters: data.boatInfo.lengthMeters,
           widthMeters: data.boatInfo.widthMeters,
+          engineInfo: data.boatInfo.engineInfo,
         }
       : null,
     leerboardInfo: data.leerboardInfo

@@ -11,6 +11,7 @@ export type BoatInfo = {
   name: string;
   lengthMeters: number;
   widthMeters: number;
+  engineInfo?: string;
   insurances?: Insurance[];
 };
 
