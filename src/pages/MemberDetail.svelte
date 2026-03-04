@@ -119,6 +119,24 @@
     // Combined loading and error states
     let loading = $derived(memberLoading || facilitiesLoading);
     let error = $derived(memberError || facilitiesError);
+
+    // Whether the member can rent facilities:
+    // - the member must have a membership for the selected season
+    // - the membership status must be ACTIVE
+    // - the membership must have a payment with a paidAt timestamp
+    let canRent = $derived.by(() => {
+        if (!member) return false;
+        const m =
+            member.memberships && member.memberships.length > 0
+                ? member.memberships[0]
+                : null;
+        if (!m) return false;
+        if (m.status !== "ACTIVE") return false;
+        if (!m.payment) return false;
+        if (!m.payment.paidAt) return false;
+        return true;
+    });
+
     // Rent/Renew facility dialog state
     let isRentDialogOpen = $state(false);
     let rentDialogMode = $state<"rent" | "renew">("rent");
@@ -444,6 +462,7 @@
                     onEditPayment={openPaymentDialog}
                     onFree={openFreeDialog}
                     onRenew={openRenewFacilityDialog}
+                    {canRent}
                 />
 
                 <!-- Membership History Card -->

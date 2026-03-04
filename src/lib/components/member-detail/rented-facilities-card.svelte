@@ -14,6 +14,8 @@
         onEditPayment: (facility: RentedFacility) => void;
         onFree: (facility: RentedFacility) => void;
         onRenew: (facility: RentedFacility) => void;
+        // Whether the UI should allow renting a facility (member has active & paid membership)
+        canRent?: boolean;
     }
 
     let {
@@ -24,6 +26,7 @@
         onEditPayment,
         onFree,
         onRenew,
+        canRent = true,
     }: Props = $props();
 </script>
 
@@ -46,7 +49,7 @@
                 </Card.Description>
             </div>
             <div class="flex items-center gap-2">
-                <Button size="sm" onclick={onRentClick}>
+                <Button size="sm" onclick={onRentClick} disabled={!canRent}>
                     <Plus class="h-4 w-4 mr-2" />
                     Affitta Servizi
                 </Button>
