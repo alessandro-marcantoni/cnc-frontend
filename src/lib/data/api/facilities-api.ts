@@ -35,12 +35,25 @@ export interface RentFacilityRequest {
   };
 }
 
+export interface BoatLengthTier {
+  minLengthMeters: number;
+  maxLengthMeters: number | null;
+  price: number;
+}
+
 export interface SuggestedPriceResponse {
   suggestedPrice: number;
   basePrice: number;
   savingsAmount: number;
   hasSpecialPrice: boolean;
   applicableRules: number;
+  pricingMethod?: string;
+  discountApplied?: boolean;
+  discountAmount?: number;
+  boatLengthTierApplied?: boolean;
+  boatLengthTierPrice?: number;
+  boatLengthTiers?: BoatLengthTier[];
+  hasBoatLengthPricing?: boolean;
 }
 
 /**
@@ -247,10 +260,15 @@ export async function getSuggestedPrice(
   facilityTypeId: number,
   memberId: number,
   seasonId: number,
+  boatLength?: number,
 ): Promise<SuggestedPriceResponse> {
-  const response = await apiFetch(
-    `/api/v1.0/facilities/suggested-price?facility_type_id=${facilityTypeId}&member_id=${memberId}&season=${seasonId}`,
-  );
+  let url = `/api/v1.0/facilities/suggested-price?facility_type_id=${facilityTypeId}&member_id=${memberId}&season=${seasonId}`;
+
+  if (boatLength !== undefined && boatLength > 0) {
+    url += `&boat_length=${boatLength}`;
+  }
+
+  const response = await apiFetch(url);
 
   if (!response.ok) {
     throw new Error(`Failed to get suggested price: ${response.statusText}`);

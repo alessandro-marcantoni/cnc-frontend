@@ -37,6 +37,7 @@
         rentFacility,
         type RentFacilityRequest,
         getSuggestedPrice,
+        type BoatLengthTier,
     } from "$lib/data/api/facilities-api";
     import { loadWaitlist } from "$lib/data/repositories";
     import DatePicker from "../ui/date-picker.svelte";
@@ -101,8 +102,11 @@
     let leerboardType = $state("");
     let leerboardLengthMeters = $state("");
 
-    // Multi-step form state
+    // Multi-step state
     let currentStep = $state(1);
+
+    // Boat length tiers
+    let boatLengthTiers = $state<BoatLengthTier[]>([]);
 
     const isRenewMode = $derived(mode === "renew");
     const defaultSeason = $derived(currentSeason.name.toString());
@@ -185,36 +189,50 @@
                 }
             } else {
                 // Rent mode: reset selections and boat fields
+                // Reset boat and insurance fields
                 selectedFacilityType = null;
                 selectedFacilityId = null;
                 price = "";
                 boatName = "";
                 boatLengthMeters = "";
                 boatWidthMeters = "";
+                boatEngineInfo = "";
                 insuranceProvider = "";
                 insuranceNumber = "";
                 insuranceExpiresAt = undefined;
+                leerboardColor = "";
+                leerboardType = "";
+                leerboardLengthMeters = "";
             }
         }
     });
 
-    // Auto-fill price and fetch suggested price when facility is selected in rent mode
+    // Fetch price when boat length changes (for boat facilities)
     $effect(() => {
         if (
-            !isRenewMode &&
-            selectedFacilityId &&
-            availableFacilities.length > 0 &&
-            selectedSeason
+            requiresBoat() &&
+            boatLengthMeters &&
+            parseFloat(boatLengthMeters) > 0
         ) {
-            const facility = availableFacilities.find(
-                (f) => f.id === selectedFacilityId,
-            );
             const selectedSeasonObj = availableSeasons.find(
                 (s) => s.name.toString() === selectedSeason,
             );
 
-            if (facility && selectedSeasonObj && selectedFacilityType) {
-                fetchSuggestedPrice(selectedFacilityType, selectedSeasonObj.id);
+            if (selectedSeasonObj) {
+                const facilityTypeId =
+                    isRenewMode && facilityToRenew
+                        ? facilityTypes.find(
+                              (ft) => ft.name === facilityToRenew.facilityName,
+                          )?.id
+                        : selectedFacilityType;
+
+                if (facilityTypeId) {
+                    fetchSuggestedPrice(
+                        facilityTypeId,
+                        selectedSeasonObj.id,
+                        parseFloat(boatLengthMeters),
+                    );
+                }
             }
         }
     });
@@ -222,6 +240,7 @@
     async function fetchSuggestedPrice(
         facilityTypeId: number,
         seasonId: number,
+        boatLength?: number,
     ) {
         isLoadingPrice = true;
         priceInfo = null;
@@ -231,11 +250,22 @@
                 facilityTypeId,
                 memberId,
                 seasonId,
+                boatLength,
             );
 
             price = result.suggestedPrice.toFixed(2);
 
-            if (result.hasSpecialPrice) {
+            // Store boat length tiers if available
+            if (result.boatLengthTiers) {
+                boatLengthTiers = result.boatLengthTiers;
+            }
+
+            if (result.discountApplied) {
+                priceInfo = {
+                    hasSpecialPrice: true,
+                    savingsAmount: result.discountAmount || 0,
+                };
+            } else if (result.hasSpecialPrice) {
                 priceInfo = {
                     hasSpecialPrice: true,
                     savingsAmount: result.savingsAmount,
@@ -285,7 +315,14 @@
                     (s) => s.name.toString() === selectedSeason,
                 );
                 if (facilityType && selectedSeasonObj) {
-                    fetchSuggestedPrice(facilityType.id, selectedSeasonObj.id);
+                    const boatLength = boatLengthMeters
+                        ? parseFloat(boatLengthMeters)
+                        : undefined;
+                    fetchSuggestedPrice(
+                        facilityType.id,
+                        selectedSeasonObj.id,
+                        boatLength,
+                    );
                 }
             } else if (!isRenewMode) {
                 // In rent mode, reset selections
@@ -386,7 +423,11 @@
         );
     });
 
+    // Calculate total steps: boat/leerboard info comes before price for boat facilities
     const totalSteps = $derived(requiresBoat() || requiresLeerboard() ? 3 : 2);
+
+    // Step order for boat facilities: 1. Selection, 2. Boat/Leerboard Info, 3. Price
+    // Step order for non-boat facilities: 1. Selection, 2. Price
 
     const isStep1Valid = $derived(
         selectedSeason &&
@@ -760,8 +801,7 @@
                 {/if}
             {/if}
 
-            <!-- Step 2: Price Input -->
-            {#if currentStep === 2}
+            {#if currentStep === 2 && !requiresBoat() && !requiresLeerboard()}
                 <div class="grid gap-2">
                     <label for="price" class="text-sm font-medium">
                         Prezzo<span class="text-destructive">*</span>
@@ -810,7 +850,7 @@
             {/if}
 
             <!-- Step 3: Boat Information (only if facility type requires it) -->
-            {#if currentStep === 3 && (requiresBoat() || requiresLeerboard())}
+            {#if currentStep === 2 && (requiresBoat() || requiresLeerboard())}
                 {#if requiresBoat()}
                     <div class="grid gap-4">
                         <div class="flex items-center gap-2">
@@ -985,6 +1025,88 @@
                         </div>
                     </div>
                 {/if}
+            {/if}
+
+            {#if currentStep === 3 && (requiresBoat() || requiresLeerboard())}
+                <div class="grid gap-2">
+                    <label for="price" class="text-sm font-medium">
+                        Price <span class="text-destructive">*</span>
+                    </label>
+                    <InputGroup.Root>
+                        <InputGroup.Addon>
+                            <InputGroup.Text>€</InputGroup.Text>
+                        </InputGroup.Addon>
+                        <InputGroup.Input
+                            id="price"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            bind:value={price}
+                            disabled={isLoadingPrice}
+                        />
+                        <InputGroup.Addon align="inline-end">
+                            <InputGroup.Text>EUR</InputGroup.Text>
+                        </InputGroup.Addon>
+                    </InputGroup.Root>
+                    {#if priceInfo?.hasSpecialPrice}
+                        <Alert.Root>
+                            <Sparkles class="h-4 w-4" />
+                            <Alert.Title class="flex items-center gap-2">
+                                Special Price Applied <Badge variant="default"
+                                    >-€{priceInfo.savingsAmount.toFixed(
+                                        2,
+                                    )}</Badge
+                                >
+                            </Alert.Title>
+                            <Alert.Description>
+                                You're getting a discount based on your current
+                                facilities.
+                            </Alert.Description>
+                        </Alert.Root>
+                    {:else if boatLengthTiers.length > 0 && boatLengthMeters}
+                        <div class="text-xs text-muted-foreground space-y-2">
+                            <p class="font-medium">
+                                Pricing based on boat length ({boatLengthMeters}m)
+                            </p>
+                            <div class="grid gap-1">
+                                {#each boatLengthTiers as tier}
+                                    {@const isActive =
+                                        parseFloat(boatLengthMeters) >=
+                                            tier.minLengthMeters &&
+                                        (tier.maxLengthMeters === null ||
+                                            parseFloat(boatLengthMeters) <
+                                                tier.maxLengthMeters)}
+                                    <div
+                                        class="flex justify-between {isActive
+                                            ? 'font-semibold text-primary'
+                                            : ''}"
+                                    >
+                                        <span
+                                            >{tier.minLengthMeters}m - {tier.maxLengthMeters ===
+                                            null
+                                                ? "∞"
+                                                : tier.maxLengthMeters +
+                                                  "m"}</span
+                                        >
+                                        <span>€{tier.price.toFixed(2)}</span>
+                                    </div>
+                                {/each}
+                            </div>
+                        </div>
+                    {:else if suggestedPrice !== null && !isLoadingPrice}
+                        <p class="text-xs text-muted-foreground">
+                            Suggested price: €{suggestedPrice.toFixed(2)}
+                        </p>
+                    {/if}
+                    {#if isLoadingPrice}
+                        <p
+                            class="text-xs text-muted-foreground flex items-center gap-2"
+                        >
+                            <Loader2 class="h-3 w-3 animate-spin" />
+                            Calculating price...
+                        </p>
+                    {/if}
+                </div>
             {/if}
         </div>
 
