@@ -9,6 +9,7 @@ export type Member = {
   membershipNumber: number;
   membershipStatus: MembershipStatus;
   membershipPaid: boolean;
+  hasRentedFacilities: boolean;
   hasUnpaidFacilities: boolean;
 };
 

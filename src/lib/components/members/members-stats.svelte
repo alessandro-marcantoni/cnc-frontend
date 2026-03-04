@@ -10,6 +10,15 @@
         active: members.filter((m) => m.membershipStatus === "ACTIVE").length,
         inactive: members.filter((m) => m.membershipStatus !== "ACTIVE").length,
         unpaid: members.filter((m) => !m.membershipPaid).length,
+        // Optional fields reserved for future UI updates:
+        // count of members that have at least one rented facility (backend may not provide this for all members yet)
+        hasRented: members.filter(
+            (m) => (m as any).hasRentedFacilities === true,
+        ).length,
+        // count of members with no rented facilities (useful to show a distinct state)
+        hasNoRented: members.filter(
+            (m) => (m as any).hasRentedFacilities === false,
+        ).length,
     });
 </script>
 

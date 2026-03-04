@@ -28,6 +28,11 @@ export async function fetchMembers(season?: string): Promise<Member[]> {
     membershipStatus: member.membershipStatus,
     membershipPaid: member.membershipPaid,
     hasUnpaidFacilities: member.hasUnpaidFacilities,
+    // New flag coming from the backend that indicates whether the member
+    // has any rented facility at all (true = has at least one rented facility).
+    // This is used by the UI to show a distinct state when the member has
+    // no rented facilities.
+    hasRentedFacilities: member.hasRentedFacilities,
   }));
 
   return members;

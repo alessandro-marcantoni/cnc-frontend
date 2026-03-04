@@ -10,15 +10,31 @@
     import { goto } from "@mateothegreat/svelte5-router";
     import { getQueryParam } from "$lib/utils/query-params";
 
-    type PaymentStatus = "PAID" | "UNPAID";
+    type MembershipPaymentStatus = "PAID" | "UNPAID";
+    type FacilitiesPaymentStatus = "PAID" | "UNPAID" | "NO_RENTED";
 
-    const paymentStatusOptions: {
-        value: PaymentStatus;
+    const membershipPaymentStatusOptions: {
+        value: MembershipPaymentStatus;
         label: string;
         variant: BadgeVariant;
     }[] = [
         { value: "PAID", label: "Pagato", variant: "default" },
         { value: "UNPAID", label: "Non Pagato", variant: "destructive" },
+    ];
+
+    const facilitiesPaymentStatusOptions: {
+        value: FacilitiesPaymentStatus;
+        label: string;
+        variant: BadgeVariant;
+    }[] = [
+        { value: "PAID", label: "Pagato", variant: "default" },
+        { value: "UNPAID", label: "Non Pagato", variant: "destructive" },
+        // When a member has no rented facilities at all we show a distinct label.
+        {
+            value: "NO_RENTED",
+            label: "Nessun affitto",
+            variant: "outline",
+        },
     ];
 
     // Props
@@ -30,8 +46,15 @@
 
     // State
     let searchQuery = $state("");
-    let membershipPaymentFilter = $state<PaymentStatus[]>(["PAID", "UNPAID"]);
-    let facilitiesPaymentFilter = $state<PaymentStatus[]>(["PAID", "UNPAID"]);
+    let membershipPaymentFilter = $state<MembershipPaymentStatus[]>([
+        "PAID",
+        "UNPAID",
+    ]);
+    let facilitiesPaymentFilter = $state<FacilitiesPaymentStatus[]>([
+        "PAID",
+        "UNPAID",
+        "NO_RENTED",
+    ]);
     let sortColumn = $state<string | null>(null);
     let sortDirection = $state<"asc" | "desc">("asc");
     let currentPage = $state(0);
@@ -52,12 +75,29 @@
         }
     }
 
-    function getMembershipPaymentStatus(member: Member): PaymentStatus {
+    function getMembershipPaymentStatus(
+        member: Member,
+    ): MembershipPaymentStatus {
         return member.membershipPaid ? "PAID" : "UNPAID";
     }
 
-    function getFacilitiesPaymentStatus(member: Member): PaymentStatus {
-        return member.hasUnpaidFacilities ? "UNPAID" : "PAID";
+    function getFacilitiesPaymentStatus(
+        member: Member,
+    ): FacilitiesPaymentStatus {
+        // The backend now provides a flag indicating whether the member has any rented facilities.
+        // The frontend model may not yet include `hasRentedFacilities` in all environments,
+        // so handle the field defensively.
+        const hasRented = (member as any).hasRentedFacilities;
+        // If the flag is explicitly false -> show NO_RENTED.
+        if (hasRented === false) {
+            return "NO_RENTED";
+        }
+        // If the flag is undefined (older backend or model), fall back to previous behavior:
+        // if they have unpaid facilities => UNPAID, otherwise PAID.
+        if (member.hasUnpaidFacilities) {
+            return "UNPAID";
+        }
+        return "PAID";
     }
 
     // Filter members
@@ -150,17 +190,43 @@
         return sortColumn === column && sortDirection === "desc";
     }
 
-    function getPaymentBadgeVariant(status: PaymentStatus): BadgeVariant {
+    function getFacilitiesPaymentBadgeVariant(
+        status: FacilitiesPaymentStatus,
+    ): BadgeVariant {
         return (
-            paymentStatusOptions.find((option) => option.value === status)
-                ?.variant || "outline"
+            facilitiesPaymentStatusOptions.find(
+                (option) => option.value === status,
+            )?.variant || "outline"
         );
     }
 
-    function getPaymentLabel(status: PaymentStatus): string {
+    function getFacilitiesPaymentLabel(
+        status: FacilitiesPaymentStatus,
+    ): string {
         return (
-            paymentStatusOptions.find((option) => option.value === status)
-                ?.label || "Unknown"
+            facilitiesPaymentStatusOptions.find(
+                (option) => option.value === status,
+            )?.label || "Unknown"
+        );
+    }
+
+    function getMembershipPaymentBadgeVariant(
+        status: MembershipPaymentStatus,
+    ): BadgeVariant {
+        return (
+            membershipPaymentStatusOptions.find(
+                (option) => option.value === status,
+            )?.variant || "outline"
+        );
+    }
+
+    function getMembershipPaymentLabel(
+        status: MembershipPaymentStatus,
+    ): string {
+        return (
+            membershipPaymentStatusOptions.find(
+                (option) => option.value === status,
+            )?.label || "Unknown"
         );
     }
 
@@ -214,7 +280,7 @@
                     Tessera:
                 </label>
                 <MultiSelect
-                    options={[...paymentStatusOptions]}
+                    options={membershipPaymentStatusOptions}
                     bind:selected={membershipPaymentFilter}
                     placeholder="Seleziona stato..."
                     class="w-60"
@@ -228,7 +294,7 @@
                     Servizi:
                 </label>
                 <MultiSelect
-                    options={paymentStatusOptions}
+                    options={facilitiesPaymentStatusOptions}
                     bind:selected={facilitiesPaymentFilter}
                     placeholder="Seleziona stato..."
                     class="w-60"
@@ -330,22 +396,22 @@
                             </Table.Cell>
                             <Table.Cell>
                                 <Badge
-                                    variant={getPaymentBadgeVariant(
+                                    variant={getMembershipPaymentBadgeVariant(
                                         getMembershipPaymentStatus(member),
                                     )}
                                 >
-                                    {getPaymentLabel(
+                                    {getMembershipPaymentLabel(
                                         getMembershipPaymentStatus(member),
                                     )}
                                 </Badge>
                             </Table.Cell>
                             <Table.Cell>
                                 <Badge
-                                    variant={getPaymentBadgeVariant(
+                                    variant={getFacilitiesPaymentBadgeVariant(
                                         getFacilitiesPaymentStatus(member),
                                     )}
                                 >
-                                    {getPaymentLabel(
+                                    {getFacilitiesPaymentLabel(
                                         getFacilitiesPaymentStatus(member),
                                     )}
                                 </Badge>
