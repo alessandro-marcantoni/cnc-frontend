@@ -35,13 +35,13 @@ export interface RentFacilityRequest {
   };
 }
 
-export interface BoatLengthTier {
+export type BoatLengthTier = {
   minLengthMeters: number;
   maxLengthMeters: number | null;
   price: number;
-}
+};
 
-export interface SuggestedPriceResponse {
+export type SuggestedPriceResponse = {
   suggestedPrice: number;
   basePrice: number;
   savingsAmount: number;
@@ -54,7 +54,7 @@ export interface SuggestedPriceResponse {
   boatLengthTierPrice?: number;
   boatLengthTiers?: BoatLengthTier[];
   hasBoatLengthPricing?: boolean;
-}
+};
 
 /**
  * Fetch facility catalog (all available facility types) from the API

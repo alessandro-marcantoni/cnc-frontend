@@ -100,7 +100,7 @@
     // Leerboard state
     let leerboardColor = $state("");
     let leerboardType = $state("");
-    let leerboardLengthMeters = $state("");
+    let leerboardLengthMeters = $state("0.0");
 
     // Multi-step state
     let currentStep = $state(1);
@@ -417,9 +417,11 @@
     const isLeerboardInfoValid = $derived(() => {
         if (!requiresLeerboard()) return true;
 
+        // All leerboard fields are optional, just validate the length is a valid number
         return (
             leerboardLengthMeters !== "" &&
-            parseFloat(leerboardLengthMeters) > 0
+            !isNaN(parseFloat(leerboardLengthMeters)) &&
+            parseFloat(leerboardLengthMeters) >= 0
         );
     });
 
@@ -437,9 +439,9 @@
                     hasAvailableFacilities)),
     );
 
-    const isStep2Valid = $derived(price && parseFloat(price) > 0);
+    	const isStep2Valid = $derived(isBoatInfoValid() && isLeerboardInfoValid());
 
-    const isStep3Valid = $derived(isBoatInfoValid() && isLeerboardInfoValid());
+    	const isStep3Valid = $derived(price && parseFloat(price) > 0);
 
     const canGoToNextStep = $derived(
         currentStep === 1
@@ -451,9 +453,9 @@
                 : false,
     );
 
-    const isValid = $derived(
-        isStep1Valid && isStep2Valid && (!requiresBoat() || isStep3Valid),
-    );
+    	const isValid = $derived(
+    		isStep1Valid && isStep2Valid && (!requiresBoat() && !requiresLeerboard() || isStep3Valid),
+    	);
 
     function handleClose() {
         open = false;
@@ -526,7 +528,7 @@
                 rentFacilityRequest.leerboardInfo = {
                     color: leerboardColor.trim() || undefined,
                     type: leerboardType.trim() || undefined,
-                    lengthMeters: parseFloat(leerboardLengthMeters),
+                    lengthMeters: parseFloat(leerboardLengthMeters) || 0.0,
                 };
             }
 
@@ -987,9 +989,7 @@
                             <!-- Leerboard Length -->
                             <div class="grid gap-2">
                                 <Label for="leerboard-length">
-                                    Lunghezza (m)<span class="text-destructive"
-                                        >*</span
-                                    >
+                                    Lunghezza (m)
                                 </Label>
                                 <Input
                                     id="leerboard-length"
@@ -999,12 +999,17 @@
                                     bind:value={leerboardLengthMeters}
                                     placeholder="0.00"
                                 />
+                                <p class="text-xs text-muted-foreground">
+                                    Tutti i campi sono opzionali. Inserisci 0.0 se non applicabile.
+                                </p>
                             </div>
 
                             <!-- Optional Fields -->
                             <div class="grid grid-cols-2 gap-4">
                                 <div class="grid gap-2">
-                                    <Label for="leerboard-color">Colore</Label>
+                                    <Label for="leerboard-color">
+                                        Colore <span class="text-xs text-muted-foreground">(opzionale)</span>
+                                    </Label>
                                     <Input
                                         id="leerboard-color"
                                         type="text"
@@ -1013,12 +1018,14 @@
                                     />
                                 </div>
                                 <div class="grid gap-2">
-                                    <Label for="leerboard-type">Tipo</Label>
+                                    <Label for="leerboard-type">
+                                        Tipo <span class="text-xs text-muted-foreground">(opzionale)</span>
+                                    </Label>
                                     <Input
                                         id="leerboard-type"
                                         type="text"
                                         bind:value={leerboardType}
-                                        placeholder="Es. Centrale"
+                                        placeholder="Es. Laser"
                                     />
                                 </div>
                             </div>
