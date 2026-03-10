@@ -20,6 +20,7 @@
     import PaymentDialog from "$lib/components/member-detail/payment-dialog.svelte";
     import FreeFacilityDialog from "$lib/components/member-detail/free-facility-dialog.svelte";
     import RenewMembershipDialog from "$lib/components/member-detail/renew-membership-dialog.svelte";
+    import EditMemberDialog from "$lib/components/member-detail/edit-member-dialog.svelte";
 
     import {
         loadMemberDetail,
@@ -152,6 +153,9 @@
     let isFreeDialogOpen = $state(false);
     let selectedRentedFacility = $state<RentedFacility | null>(null);
 
+    // Edit member dialog state
+    let isEditMemberDialogOpen = $state(false);
+
     // PDF download state
     let isDownloadingPDF = $state(false);
 
@@ -270,9 +274,20 @@
 
     // Renew membership functions
     function openRenewMembershipDialog() {
-        renewMembershipSeason = undefined;
+        renewMembershipSeason = currentSeason.name.toString();
         renewMembershipPrice = "";
         isRenewMembershipDialogOpen = true;
+    }
+
+    // Edit member functions
+    function openEditMemberDialog() {
+        isEditMemberDialogOpen = true;
+    }
+
+    function handleEditMemberSuccess(updatedMember: any) {
+        // The repository cache is already updated by the updateMember function
+        // We just need to trigger a refresh to ensure UI is in sync
+        handleRefresh();
     }
 
     async function handleRenewMembershipSubmit() {
@@ -439,7 +454,7 @@
             <!-- Left Column: Personal Info & Membership -->
             <div class="lg:col-span-1 space-y-6">
                 <!-- Personal Information Card -->
-                <MemberInfoCard {member} />
+                <MemberInfoCard {member} onEdit={openEditMemberDialog} />
 
                 <!-- Current Membership Card -->
                 <MembershipCard
@@ -527,5 +542,16 @@
     onSeasonChange={(season) => (renewMembershipSeason = season)}
     onPriceChange={(price) => (renewMembershipPrice = price)}
 />
+
+<!-- Edit Member Dialog -->
+{#if member && selectedSeason}
+    <EditMemberDialog
+        bind:open={isEditMemberDialogOpen}
+        {member}
+        season={selectedSeason.id}
+        onClose={() => (isEditMemberDialogOpen = false)}
+        onSuccess={handleEditMemberSuccess}
+    />
+{/if}
 
 <!-- Renew Facility Dialog -->

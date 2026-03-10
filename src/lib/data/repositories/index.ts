@@ -16,6 +16,7 @@ export {
 export {
   loadMemberDetail,
   clearMemberDetailCache,
+  updateMember,
   isLoadingMemberDetail,
   memberDetailError,
   memberDetail,

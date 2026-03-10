@@ -1,7 +1,7 @@
 import { writable, derived, get } from "svelte/store";
 import type { MemberDetail } from "$model/members/member-detail";
 import { mockMemberDetails } from "$lib/data/mock-member-details";
-import { fetchMemberDetail } from "$lib/data/api";
+import { fetchMemberDetail, updateMemberDetail } from "$lib/data/api";
 
 // Configuration
 const USE_MOCK_DATA = import.meta.env.DEV && !import.meta.env.VITE_API_URL;
@@ -211,5 +211,104 @@ export function clearMemberDetailCache(
       ...state,
       cache: new Map(),
     }));
+  }
+}
+
+/**
+ * Updates member detail
+ * @param memberId - The ID of the member to update
+ * @param memberData - The updated member data
+ * @param season - The season to use for fetching updated data
+ */
+export async function updateMember(
+  memberId: number,
+  memberData: {
+    firstName: string;
+    lastName: string;
+    birthDate: string;
+    email?: string;
+    taxCode?: string;
+    phoneNumbers: Array<{ number: string }>;
+    addresses: Array<{
+      country: string;
+      city: string;
+      zipCode: string;
+      street: string;
+      number: string;
+    }>;
+  },
+  season: number,
+): Promise<MemberDetail> {
+  const cacheKey = getCacheKey(memberId, season);
+
+  // Start loading
+  memberDetailStore.update((state) => ({
+    ...state,
+    loading: new Set(state.loading).add(cacheKey),
+    errors: (() => {
+      const errors = new Map(state.errors);
+      errors.delete(cacheKey);
+      return errors;
+    })(),
+  }));
+
+  try {
+    // Transform addresses to match API format
+    const requestData = {
+      ...memberData,
+      addresses: memberData.addresses.map((addr) => ({
+        country: addr.country,
+        city: addr.city,
+        zipCode: addr.zipCode,
+        street: addr.street,
+        streetNumber: addr.number,
+      })),
+    };
+
+    const updatedMemberDetail = await updateMemberDetail(
+      memberId,
+      requestData,
+      season,
+    );
+
+    // Update cache with the new data
+    memberDetailStore.update((state) => {
+      const cache = new Map(state.cache);
+      cache.set(cacheKey, {
+        data: updatedMemberDetail,
+        timestamp: Date.now(),
+      });
+
+      const loading = new Set(state.loading);
+      loading.delete(cacheKey);
+
+      return {
+        ...state,
+        cache,
+        loading,
+      };
+    });
+
+    return updatedMemberDetail;
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
+
+    // Update error state
+    memberDetailStore.update((state) => {
+      const errors = new Map(state.errors);
+      errors.set(cacheKey, errorMessage);
+
+      const loading = new Set(state.loading);
+      loading.delete(cacheKey);
+
+      return {
+        ...state,
+        errors,
+        loading,
+      };
+    });
+
+    throw error;
   }
 }

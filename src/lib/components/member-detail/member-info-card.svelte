@@ -1,6 +1,7 @@
 <script lang="ts">
     import * as Card from "$lib/components/ui/card";
     import { Separator } from "$lib/components/ui/separator";
+    import { Button } from "$lib/components/ui/button";
     import {
         User,
         Mail,
@@ -8,6 +9,7 @@
         Phone,
         MapPin,
         CreditCard,
+        Pencil,
     } from "@lucide/svelte";
     import { formatDate } from "$model/shared/date-utils";
     import type { MemberDetail } from "$model/members/member-detail";
@@ -19,9 +21,10 @@
 
     interface Props {
         member: MemberDetail;
+        onEdit?: () => void;
     }
 
-    let { member }: Props = $props();
+    let { member, onEdit }: Props = $props();
 
     function calculateAge(birthDate: DateValue): number {
         const today = now(getLocalTimeZone());
@@ -36,10 +39,17 @@
 
 <Card.Root>
     <Card.Header>
-        <Card.Title class="flex items-center gap-2">
-            <User class="h-5 w-5" />
-            Informazioni Personali
-        </Card.Title>
+        <div class="flex items-center justify-between">
+            <Card.Title class="flex items-center gap-2">
+                <User class="h-5 w-5" />
+                Informazioni Personali
+            </Card.Title>
+            {#if onEdit}
+                <Button variant="outline" size="sm" onclick={onEdit}>
+                    <Pencil class="h-4 w-4" /> Modifica
+                </Button>
+            {/if}
+        </div>
     </Card.Header>
     <Card.Content class="space-y-4">
         <!-- Email -->

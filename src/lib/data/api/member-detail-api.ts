@@ -72,3 +72,106 @@ export async function fetchMemberDetail(
 
   return memberDetail;
 }
+
+/**
+ * Update member detail by ID
+ */
+export async function updateMemberDetail(
+  memberId: number,
+  memberData: {
+    firstName: string;
+    lastName: string;
+    birthDate: string;
+    email?: string;
+    taxCode?: string;
+    phoneNumbers: Array<{ number: string }>;
+    addresses: Array<{
+      country: string;
+      city: string;
+      zipCode: string;
+      street: string;
+      streetNumber: string;
+    }>;
+  },
+  season: number,
+): Promise<MemberDetail> {
+  const url = `/api/v1.0/members/${memberId}?season=${season}`;
+
+  const requestBody = {
+    firstName: memberData.firstName,
+    lastName: memberData.lastName,
+    birthDate: memberData.birthDate,
+    email: memberData.email || "",
+    taxCode: memberData.taxCode || "",
+    phoneNumbers: memberData.phoneNumbers,
+    addresses: memberData.addresses.map((addr) => ({
+      country: addr.country,
+      city: addr.city,
+      zipCode: addr.zipCode,
+      street: addr.street,
+      streetNumber: addr.streetNumber,
+    })),
+  };
+
+  const response = await apiFetch(url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error(`Member with ID ${memberId} not found`);
+    }
+    throw new Error(`Failed to update member: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+
+  // Transform API response to MemberDetail type (same as fetchMemberDetail)
+  const memberDetail: MemberDetail = {
+    id: data.id,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    email: data.email,
+    taxCode: data.taxCode,
+    birthDate: parseDate(data.birthDate),
+    addresses: data.addresses.map((address: any) => ({
+      country: address.country,
+      city: address.city,
+      zipCode: address.zipCode,
+      street: address.street,
+      number: address.streetNumber,
+    })),
+    phoneNumbers:
+      data.phoneNumbers?.map((phone: any) => ({
+        number: phone.number,
+      })) || [],
+    memberships: data.memberships.map((membership: any) => ({
+      id: membership.id,
+      number: membership.number,
+      status: membership.status,
+      validFrom: parseDate(membership.validFrom),
+      expiresAt: parseDate(membership.expiresAt),
+      periodId: membership.periodId,
+      price: membership.price,
+      payment: membership.payment
+        ? {
+            id: membership.payment.id,
+            amount: membership.payment.amount,
+            currency: membership.payment.currency,
+            paidAt: parseAbsolute(
+              membership.payment.paidAt,
+              getLocalTimeZone(),
+            ),
+            paymentMethod: membership.payment.paymentMethod,
+            transactionRef: membership.payment.transactionRef,
+          }
+        : null,
+    })),
+  };
+
+  return memberDetail;
+}
