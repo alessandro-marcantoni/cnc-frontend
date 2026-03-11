@@ -17,9 +17,17 @@ export async function downloadMemberListPDF(seasonId: number): Promise<void> {
   );
 
   if (!response.ok) {
-    throw new Error(
-      `Failed to generate member list PDF: ${response.statusText}`,
-    );
+    // Try to get error message from response body
+    let errorMessage = `Failed to generate member list PDF: ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      if (errorData.error) {
+        errorMessage = errorData.error;
+      }
+    } catch {
+      // If response isn't JSON, use status text
+    }
+    throw new Error(errorMessage);
   }
 
   // Get the PDF blob
@@ -59,9 +67,17 @@ export async function downloadMemberDetailPDF(
   );
 
   if (!response.ok) {
-    throw new Error(
-      `Failed to generate member detail PDF: ${response.statusText}`,
-    );
+    // Try to get error message from response body
+    let errorMessage = `Failed to generate member detail PDF: ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      if (errorData.error) {
+        errorMessage = errorData.error;
+      }
+    } catch {
+      // If response isn't JSON, use status text
+    }
+    throw new Error(errorMessage);
   }
 
   // Get the PDF blob

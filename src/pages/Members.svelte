@@ -7,6 +7,7 @@
     import Header from "$lib/components/shared/header.svelte";
     import * as Card from "$lib/components/ui/card";
     import * as Select from "$lib/components/ui/select";
+    import * as Alert from "$lib/components/ui/alert";
     import { Button } from "$lib/components/ui/button";
     import {
         RefreshCw,
@@ -14,6 +15,7 @@
         UserPlus,
         Calendar,
         FileText,
+        X,
     } from "@lucide/svelte";
     import {
         members,
@@ -36,6 +38,7 @@
 
     // PDF download state
     let isDownloadingPDF = $state(false);
+    let pdfErrorMessage = $state<string | null>(null);
 
     // Get available seasons
     const seasons = getSeasons();
@@ -64,17 +67,20 @@
 
     async function handleDownloadPDF() {
         if (!selectedSeason) {
-            // TODO: Show error toast - need to select a season
-            console.error("Please select a season to download PDF");
+            pdfErrorMessage = "Seleziona una stagione per scaricare il PDF";
             return;
         }
 
         isDownloadingPDF = true;
+        pdfErrorMessage = null;
         try {
             await downloadMemberListPDF(selectedSeason.id);
         } catch (error) {
             console.error("Failed to download PDF:", error);
-            // TODO: Show error toast
+            pdfErrorMessage =
+                error instanceof Error
+                    ? error.message
+                    : "Errore durante la generazione del PDF";
         } finally {
             isDownloadingPDF = false;
         }
@@ -116,6 +122,25 @@
 
 <!-- Main Content -->
 <main class="container mx-auto px-4 py-8">
+    <!-- PDF Error Alert -->
+    {#if pdfErrorMessage}
+        <Alert.Root variant="destructive" class="mb-4">
+            <CircleAlert class="h-4 w-4" />
+            <Alert.Title class="flex items-center justify-between">
+                <span>Errore Generazione PDF</span>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    class="h-6 w-6"
+                    onclick={() => (pdfErrorMessage = null)}
+                >
+                    <X class="h-4 w-4" />
+                </Button>
+            </Alert.Title>
+            <Alert.Description>{pdfErrorMessage}</Alert.Description>
+        </Alert.Root>
+    {/if}
+
     {#if $membersError}
         <!-- Error State -->
         <div
