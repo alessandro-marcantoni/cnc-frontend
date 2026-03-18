@@ -237,6 +237,25 @@
         }
     });
 
+    // Fetch price when facility is selected (for non-boat facilities)
+    $effect(() => {
+        if (
+            !isRenewMode &&
+            selectedFacilityType &&
+            selectedFacilityId &&
+            !requiresBoat() &&
+            !requiresLeerboard()
+        ) {
+            const selectedSeasonObj = availableSeasons.find(
+                (s) => s.name.toString() === selectedSeason,
+            );
+
+            if (selectedSeasonObj) {
+                fetchSuggestedPrice(selectedFacilityType, selectedSeasonObj.id);
+            }
+        }
+    });
+
     async function fetchSuggestedPrice(
         facilityTypeId: number,
         seasonId: number,
@@ -439,9 +458,9 @@
                     hasAvailableFacilities)),
     );
 
-    	const isStep2Valid = $derived(isBoatInfoValid() && isLeerboardInfoValid());
+    const isStep2Valid = $derived(isBoatInfoValid() && isLeerboardInfoValid());
 
-    	const isStep3Valid = $derived(price && parseFloat(price) > 0);
+    const isStep3Valid = $derived(price && parseFloat(price) > 0);
 
     const canGoToNextStep = $derived(
         currentStep === 1
@@ -453,9 +472,11 @@
                 : false,
     );
 
-    	const isValid = $derived(
-    		isStep1Valid && isStep2Valid && (!requiresBoat() && !requiresLeerboard() || isStep3Valid),
-    	);
+    const isValid = $derived(
+        isStep1Valid &&
+            isStep2Valid &&
+            ((!requiresBoat() && !requiresLeerboard()) || isStep3Valid),
+    );
 
     function handleClose() {
         open = false;
@@ -1000,7 +1021,8 @@
                                     placeholder="0.00"
                                 />
                                 <p class="text-xs text-muted-foreground">
-                                    Tutti i campi sono opzionali. Inserisci 0.0 se non applicabile.
+                                    Tutti i campi sono opzionali. Inserisci 0.0
+                                    se non applicabile.
                                 </p>
                             </div>
 
@@ -1008,7 +1030,10 @@
                             <div class="grid grid-cols-2 gap-4">
                                 <div class="grid gap-2">
                                     <Label for="leerboard-color">
-                                        Colore <span class="text-xs text-muted-foreground">(opzionale)</span>
+                                        Colore <span
+                                            class="text-xs text-muted-foreground"
+                                            >(opzionale)</span
+                                        >
                                     </Label>
                                     <Input
                                         id="leerboard-color"
@@ -1019,7 +1044,10 @@
                                 </div>
                                 <div class="grid gap-2">
                                     <Label for="leerboard-type">
-                                        Tipo <span class="text-xs text-muted-foreground">(opzionale)</span>
+                                        Tipo <span
+                                            class="text-xs text-muted-foreground"
+                                            >(opzionale)</span
+                                        >
                                     </Label>
                                     <Input
                                         id="leerboard-type"
