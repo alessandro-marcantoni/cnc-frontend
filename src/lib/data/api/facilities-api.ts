@@ -279,6 +279,78 @@ export async function getSuggestedPrice(
 }
 
 /**
+ * Change the specific facility for an existing rental
+ * This allows changing the facility identifier while keeping the same facility type
+ */
+export async function changeFacility(
+  rentedFacilityId: number,
+  newFacilityId: number,
+  memberId: number,
+  seasonId: number,
+): Promise<RentedFacility> {
+  const response = await apiFetch(
+    `/api/v1.0/facilities/rented/${rentedFacilityId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        newFacilityId,
+        memberId,
+        seasonId,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(error || "Failed to change facility");
+  }
+
+  const data = await response.json();
+
+  const rentedFacility: RentedFacility = {
+    id: data.id,
+    facilityId: data.facilityId,
+    facilityIdentifier: data.facilityIdentifier,
+    facilityName: data.facilityName,
+    facilityTypeDescription: data.facilityTypeDescription,
+    rentedAt: parseDate(data.rentedAt),
+    expiresAt: parseDate(data.expiresAt),
+    price: data.price,
+    payment: data.payment
+      ? {
+          id: data.payment.id,
+          amount: data.payment.amount,
+          currency: data.payment.currency,
+          paidAt: parseAbsolute(data.payment.paidAt, getLocalTimeZone()),
+          paymentMethod: data.payment.paymentMethod,
+          transactionRef: data.payment.transactionRef,
+        }
+      : null,
+    boatInfo: data.boatInfo
+      ? {
+          name: data.boatInfo.name,
+          lengthMeters: data.boatInfo.lengthMeters,
+          widthMeters: data.boatInfo.widthMeters,
+          engineInfo: data.boatInfo.engineInfo,
+          insurances: data.boatInfo.insurances || [],
+        }
+      : null,
+    leerboardInfo: data.leerboardInfo
+      ? {
+          color: data.leerboardInfo.color,
+          type: data.leerboardInfo.type,
+          lengthMeters: data.leerboardInfo.lengthMeters,
+        }
+      : null,
+  };
+
+  return rentedFacility;
+}
+
+/**
  * Free a rented facility (soft delete)
  * @param rentedFacilityId - The ID of the rented facility to free
  * @returns Success status

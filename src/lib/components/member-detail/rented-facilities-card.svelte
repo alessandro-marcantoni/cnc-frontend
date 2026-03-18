@@ -14,6 +14,7 @@
         onEditPayment: (facility: RentedFacility) => void;
         onFree: (facility: RentedFacility) => void;
         onRenew: (facility: RentedFacility) => void;
+        onChange: (facility: RentedFacility) => void;
         // Whether the UI should allow renting a facility (member has active & paid membership)
         canRent?: boolean;
     }
@@ -26,6 +27,7 @@
         onEditPayment,
         onFree,
         onRenew,
+        onChange,
         canRent = true,
     }: Props = $props();
 </script>
@@ -87,6 +89,7 @@
                         onEditPayment={(f) => onEditPayment(f)}
                         onFree={(f) => onFree(f)}
                         onRenew={(f) => onRenew(f)}
+                        onChange={(f) => onChange(f)}
                     />
                 {/each}
             </div>

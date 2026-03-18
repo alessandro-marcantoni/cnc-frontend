@@ -23,6 +23,7 @@
     import FreeFacilityDialog from "$lib/components/member-detail/free-facility-dialog.svelte";
     import RenewMembershipDialog from "$lib/components/member-detail/renew-membership-dialog.svelte";
     import EditMemberDialog from "$lib/components/member-detail/edit-member-dialog.svelte";
+    import ChangeFacilityDialog from "$lib/components/member-detail/change-facility-dialog.svelte";
 
     import {
         loadMemberDetail,
@@ -153,6 +154,7 @@
     // Modify/Free facility dialog state
     let isPaymentDialogOpen = $state(false);
     let isFreeDialogOpen = $state(false);
+    let isChangeFacilityDialogOpen = $state(false);
     let selectedRentedFacility = $state<RentedFacility | null>(null);
 
     // Edit member dialog state
@@ -332,6 +334,21 @@
         }
     }
 
+    async function openChangeFacilityDialog(facility: RentedFacility) {
+        selectedRentedFacility = facility;
+
+        // Load facilities for the same type
+        const facilityType = $facilitiesCatalog.find(
+            (ft) => ft.name === facility.facilityName,
+        );
+        if (facilityType) {
+            const seasonToUse = selectedSeason || currentSeason;
+            await loadFacilitiesByType(facilityType.id, seasonToUse.id);
+        }
+
+        isChangeFacilityDialogOpen = true;
+    }
+
     // Renew facility functions
     function openRenewFacilityDialog(facility: RentedFacility) {
         rentDialogMode = "renew";
@@ -503,6 +520,7 @@
                     onEditPayment={openPaymentDialog}
                     onFree={openFreeDialog}
                     onRenew={openRenewFacilityDialog}
+                    onChange={openChangeFacilityDialog}
                     {canRent}
                 />
 
@@ -567,6 +585,22 @@
     onSubmit={handleRenewMembershipSubmit}
     onSeasonChange={(season) => (renewMembershipSeason = season)}
     onPriceChange={(price) => (renewMembershipPrice = price)}
+/>
+
+<!-- Change Facility Dialog -->
+<ChangeFacilityDialog
+    bind:open={isChangeFacilityDialogOpen}
+    facility={selectedRentedFacility}
+    {memberId}
+    seasonId={selectedSeason ? selectedSeason.id : currentSeason.id}
+    availableFacilities={selectedRentedFacility &&
+    $facilitiesCatalog.find(
+        (ft) => ft.name === selectedRentedFacility?.facilityName,
+    )
+        ? $facilitiesByType
+        : []}
+    onClose={() => (isChangeFacilityDialogOpen = false)}
+    onSuccess={handleRefresh}
 />
 
 <!-- Edit Member Dialog -->

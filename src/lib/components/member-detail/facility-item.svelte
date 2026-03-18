@@ -28,9 +28,11 @@
         onEditPayment: (facility: RentedFacility) => void;
         onFree: (facility: RentedFacility) => void;
         onRenew: (facility: RentedFacility) => void;
+        onChange: (facility: RentedFacility) => void;
     }
 
-    let { facility, onEditPayment, onFree, onRenew }: Props = $props();
+    let { facility, onEditPayment, onFree, onRenew, onChange }: Props =
+        $props();
 
     function formatCurrency(amount: number, currency: string): string {
         return new Intl.NumberFormat("it-IT", {
@@ -78,6 +80,14 @@
             >
                 <CirclePlus class="h-4 w-4 mr-2" />
                 Rinnova
+            </Button>
+            <Button
+                variant="outline"
+                size="sm"
+                onclick={() => onChange(facility)}
+            >
+                <Pencil class="h-4 w-4 mr-2" />
+                Cambia
             </Button>
             <Button
                 variant="outline"
