@@ -10,7 +10,8 @@ export type Insurance = {
 export type BoatInfo = {
   name: string;
   lengthMeters: number;
-  widthMeters: number;
+  widthMeters?: number; // Nullable - can be omitted if not measured
+  type?: string; // Type/category of boat (e.g., Sailing, Motor, Inflatable)
   engineInfo?: string;
   insurances?: Insurance[];
 };

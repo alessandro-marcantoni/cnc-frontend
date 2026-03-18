@@ -20,7 +20,8 @@ export interface RentFacilityRequest {
   boatInfo?: {
     name: string;
     lengthMeters: number;
-    widthMeters: number;
+    widthMeters?: number;
+    type?: string;
     engineInfo?: string;
     insurances: Array<{
       provider: string;
@@ -165,7 +166,8 @@ export async function fetchRentedFacilities(
       ? {
           name: facility.boatInfo.name,
           lengthMeters: facility.boatInfo.lengthMeters,
-          widthMeters: facility.boatInfo.widthMeters,
+          widthMeters: facility.boatInfo.widthMeters, // Now nullable
+          type: facility.boatInfo.type,
           engineInfo: facility.boatInfo.engineInfo,
           insurances: facility.boatInfo.insurances || [],
         }
@@ -237,8 +239,10 @@ export async function rentFacility(
       ? {
           name: data.boatInfo.name,
           lengthMeters: data.boatInfo.lengthMeters,
-          widthMeters: data.boatInfo.widthMeters,
+          widthMeters: data.boatInfo.widthMeters, // Now nullable
+          type: data.boatInfo.type,
           engineInfo: data.boatInfo.engineInfo,
+          insurances: data.boatInfo.insurances || [],
         }
       : null,
     leerboardInfo: data.leerboardInfo
@@ -333,7 +337,8 @@ export async function changeFacility(
       ? {
           name: data.boatInfo.name,
           lengthMeters: data.boatInfo.lengthMeters,
-          widthMeters: data.boatInfo.widthMeters,
+          widthMeters: data.boatInfo.widthMeters, // Now nullable
+          type: data.boatInfo.type,
           engineInfo: data.boatInfo.engineInfo,
           insurances: data.boatInfo.insurances || [],
         }

@@ -22,6 +22,7 @@
         Anchor,
         ChevronLeft,
         ChevronRight,
+        Shield,
     } from "@lucide/svelte";
 
     import {
@@ -92,6 +93,7 @@
     let boatName = $state("");
     let boatLengthMeters = $state("");
     let boatWidthMeters = $state("");
+    let boatType = $state("");
     let boatEngineInfo = $state("");
     let insuranceProvider = $state("");
     let insuranceNumber = $state("");
@@ -132,8 +134,10 @@
                     boatName = facilityToRenew.boatInfo.name;
                     boatLengthMeters =
                         facilityToRenew.boatInfo.lengthMeters.toString();
-                    boatWidthMeters =
-                        facilityToRenew.boatInfo.widthMeters.toString();
+                    boatWidthMeters = facilityToRenew.boatInfo.widthMeters
+                        ? facilityToRenew.boatInfo.widthMeters.toString()
+                        : "";
+                    boatType = facilityToRenew.boatInfo.type || "";
 
                     // Pre-populate insurance info from first insurance (UI only supports one)
                     const insurance = facilityToRenew.boatInfo.insurances?.[0];
@@ -196,6 +200,7 @@
                 boatName = "";
                 boatLengthMeters = "";
                 boatWidthMeters = "";
+                boatType = "";
                 boatEngineInfo = "";
                 insuranceProvider = "";
                 insuranceNumber = "";
@@ -421,9 +426,8 @@
         const hasValidBoatInfo =
             boatName.trim() !== "" &&
             boatLengthMeters !== "" &&
-            parseFloat(boatLengthMeters) > 0 &&
-            boatWidthMeters !== "" &&
-            parseFloat(boatWidthMeters) > 0;
+            parseFloat(boatLengthMeters) > 0;
+        // Width is now optional
 
         const hasValidInsurance =
             insuranceProvider.trim() !== "" &&
@@ -445,9 +449,12 @@
     });
 
     // Calculate total steps: boat/leerboard info comes before price for boat facilities
-    const totalSteps = $derived(requiresBoat() || requiresLeerboard() ? 3 : 2);
+    const totalSteps = $derived(
+        requiresBoat() ? 4 : requiresLeerboard() ? 3 : 2,
+    );
 
-    // Step order for boat facilities: 1. Selection, 2. Boat/Leerboard Info, 3. Price
+    // Step order for boat facilities: 1. Selection, 2. Boat Info, 3. Insurance Info, 4. Price
+    // Step order for leerboard facilities: 1. Selection, 2. Leerboard Info, 3. Price
     // Step order for non-boat facilities: 1. Selection, 2. Price
 
     const isStep1Valid = $derived(
@@ -458,24 +465,62 @@
                     hasAvailableFacilities)),
     );
 
-    const isStep2Valid = $derived(isBoatInfoValid() && isLeerboardInfoValid());
+    const isStep2Valid = $derived(() => {
+        if (requiresBoat()) {
+            // For boat facilities, step 2 is boat info only (no insurance)
+            return (
+                boatName.trim() !== "" &&
+                boatLengthMeters !== "" &&
+                parseFloat(boatLengthMeters) > 0
+            );
+        }
+        if (requiresLeerboard()) {
+            return isLeerboardInfoValid();
+        }
+        return true;
+    });
 
-    const isStep3Valid = $derived(price && parseFloat(price) > 0);
+    const isStep3Valid = $derived(() => {
+        if (requiresBoat()) {
+            // For boat facilities, step 3 is insurance info
+            return (
+                insuranceProvider.trim() !== "" &&
+                insuranceNumber.trim() !== "" &&
+                insuranceExpiresAt !== undefined
+            );
+        }
+        if (requiresLeerboard()) {
+            // For leerboard facilities, step 3 is price
+            return price && parseFloat(price) > 0;
+        }
+        // For other facilities, step 3 doesn't exist
+        return true;
+    });
+
+    const isStep4Valid = $derived(price && parseFloat(price) > 0);
 
     const canGoToNextStep = $derived(
         currentStep === 1
             ? isStep1Valid
             : currentStep === 2
-              ? isStep2Valid
+              ? isStep2Valid()
               : currentStep === 3
-                ? isStep3Valid
-                : false,
+                ? isStep3Valid()
+                : currentStep === 4
+                  ? isStep4Valid
+                  : false,
     );
 
     const isValid = $derived(
         isStep1Valid &&
-            isStep2Valid &&
-            ((!requiresBoat() && !requiresLeerboard()) || isStep3Valid),
+            isStep2Valid() &&
+            isStep3Valid() &&
+            ((!requiresBoat() && !requiresLeerboard()) ||
+                (requiresBoat()
+                    ? isStep4Valid
+                    : requiresLeerboard()
+                      ? true
+                      : true)),
     );
 
     function handleClose() {
@@ -530,7 +575,10 @@
                 rentFacilityRequest.boatInfo = {
                     name: boatName.trim(),
                     lengthMeters: parseFloat(boatLengthMeters),
-                    widthMeters: parseFloat(boatWidthMeters),
+                    widthMeters: boatWidthMeters
+                        ? parseFloat(boatWidthMeters)
+                        : undefined,
+                    type: boatType.trim() || undefined,
                     engineInfo: boatEngineInfo.trim() || undefined,
                     insurances: [
                         {
@@ -584,6 +632,7 @@
         boatName = "";
         boatLengthMeters = "";
         boatWidthMeters = "";
+        boatType = "";
         insuranceProvider = "";
         insuranceNumber = "";
         insuranceExpiresAt = undefined;
@@ -623,16 +672,41 @@
                         per
                         {memberName}
                     {:else if currentStep === 2}
-                        Imposta il prezzo per il servizio
+                        {#if requiresBoat()}
+                            Verifica e aggiorna le informazioni della barca
+                        {:else if requiresLeerboard()}
+                            Verifica e aggiorna le informazioni del deriva
+                        {:else}
+                            Imposta il prezzo per il servizio
+                        {/if}
                     {:else if currentStep === 3}
-                        Verifica e aggiorna le informazioni della barca
+                        {#if requiresBoat()}
+                            Verifica e aggiorna le informazioni
+                            dell'assicurazione
+                        {:else if requiresLeerboard()}
+                            Imposta il prezzo per il servizio
+                        {/if}
+                    {:else if currentStep === 4}
+                        Imposta il prezzo per il servizio
                     {/if}
                 {:else if currentStep === 1}
                     Seleziona stagione e servizio per {memberName}
                 {:else if currentStep === 2}
-                    Imposta il prezzo per il servizio
+                    {#if requiresBoat()}
+                        Inserisci le informazioni della barca
+                    {:else if requiresLeerboard()}
+                        Inserisci le informazioni del deriva
+                    {:else}
+                        Imposta il prezzo per il servizio
+                    {/if}
                 {:else if currentStep === 3}
-                    Inserisci le informazioni della barca
+                    {#if requiresBoat()}
+                        Inserisci le informazioni dell'assicurazione
+                    {:else if requiresLeerboard()}
+                        Imposta il prezzo per il servizio
+                    {/if}
+                {:else if currentStep === 4}
+                    Imposta il prezzo per il servizio
                 {/if}
             </Dialog.Description>
         </Dialog.Header>
@@ -919,7 +993,8 @@
                                 <div class="grid gap-2">
                                     <Label for="boat-width">
                                         Larghezza (m)<span
-                                            class="text-destructive">*</span
+                                            class="text-xs text-muted-foreground ml-1"
+                                            >(opzionale)</span
                                         >
                                     </Label>
                                     <Input
@@ -933,6 +1008,26 @@
                                 </div>
                             </div>
 
+                            <!-- Boat Type Field -->
+                            <div class="grid gap-2">
+                                <Label for="boat-type">
+                                    Tipo Imbarcazione<span
+                                        class="text-xs text-muted-foreground ml-1"
+                                        >(opzionale)</span
+                                    >
+                                </Label>
+                                <Input
+                                    id="boat-type"
+                                    type="text"
+                                    bind:value={boatType}
+                                    placeholder="es. Vela, Motore, Gommone, Kayak"
+                                />
+                                <p class="text-xs text-muted-foreground">
+                                    Specifica il tipo o categoria
+                                    dell'imbarcazione
+                                </p>
+                            </div>
+
                             <!-- Engine Information -->
                             <div class="grid gap-2">
                                 <Label for="boat-engine"
@@ -944,54 +1039,6 @@
                                     bind:value={boatEngineInfo}
                                     placeholder="Es. Yamaha 40HP"
                                 />
-                            </div>
-
-                            <!-- Insurance Information -->
-                            <div class="grid gap-3">
-                                <Label>
-                                    Assicurazione<span class="text-destructive"
-                                        >*</span
-                                    >
-                                </Label>
-
-                                <div class="grid gap-3 p-3 border rounded-lg">
-                                    <div class="grid gap-2">
-                                        <Label for="insurance-provider">
-                                            Compagnia Assicurativa<span
-                                                class="text-destructive">*</span
-                                            >
-                                        </Label>
-                                        <Input
-                                            id="insurance-provider"
-                                            type="text"
-                                            bind:value={insuranceProvider}
-                                            placeholder="Es. Generali"
-                                        />
-                                    </div>
-
-                                    <div class="grid gap-2">
-                                        <Label for="insurance-number">
-                                            Numero Polizza<span
-                                                class="text-destructive">*</span
-                                            >
-                                        </Label>
-                                        <Input
-                                            id="insurance-number"
-                                            type="text"
-                                            bind:value={insuranceNumber}
-                                            placeholder="Es. 123456789"
-                                        />
-                                    </div>
-
-                                    <div class="grid gap-2">
-                                        <DatePicker
-                                            id="insurance-expires"
-                                            label="Data Scadenza *"
-                                            bind:value={insuranceExpiresAt}
-                                            placeholder="Seleziona data"
-                                        />
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -1062,7 +1109,58 @@
                 {/if}
             {/if}
 
-            {#if currentStep === 3 && (requiresBoat() || requiresLeerboard())}
+            {#if currentStep === 3 && requiresBoat()}
+                <!-- Insurance Information Step -->
+                <div class="grid gap-4">
+                    <div class="flex items-center gap-2">
+                        <Shield class="h-5 w-5" />
+                        <h3 class="text-lg font-semibold">
+                            Informazioni Assicurazione
+                        </h3>
+                    </div>
+
+                    <div class="grid gap-4">
+                        <div class="grid gap-2">
+                            <Label for="insurance-provider">
+                                Compagnia Assicurativa<span
+                                    class="text-destructive">*</span
+                                >
+                            </Label>
+                            <Input
+                                id="insurance-provider"
+                                type="text"
+                                bind:value={insuranceProvider}
+                                placeholder="Es. Generali"
+                            />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="insurance-number">
+                                Numero Polizza<span class="text-destructive"
+                                    >*</span
+                                >
+                            </Label>
+                            <Input
+                                id="insurance-number"
+                                type="text"
+                                bind:value={insuranceNumber}
+                                placeholder="Es. 123456789"
+                            />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <DatePicker
+                                id="insurance-expires"
+                                label="Data Scadenza *"
+                                bind:value={insuranceExpiresAt}
+                                placeholder="Seleziona data"
+                            />
+                        </div>
+                    </div>
+                </div>
+            {/if}
+
+            {#if (currentStep === 3 && requiresLeerboard() && !requiresBoat()) || (currentStep === 4 && requiresBoat())}
                 <div class="grid gap-2">
                     <label for="price" class="text-sm font-medium">
                         Price <span class="text-destructive">*</span>

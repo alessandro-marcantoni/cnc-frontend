@@ -141,10 +141,20 @@
                         {facility.boatInfo.lengthMeters}m
                     </p>
                 </div>
-                <div>
-                    <p class="text-muted-foreground mb-1">Larghezza</p>
-                    <p class="font-medium">{facility.boatInfo.widthMeters}m</p>
-                </div>
+                {#if facility.boatInfo.widthMeters}
+                    <div>
+                        <p class="text-muted-foreground mb-1">Larghezza</p>
+                        <p class="font-medium">
+                            {facility.boatInfo.widthMeters}m
+                        </p>
+                    </div>
+                {/if}
+                {#if facility.boatInfo.type}
+                    <div>
+                        <p class="text-muted-foreground mb-1">Tipo</p>
+                        <p class="font-medium">{facility.boatInfo.type}</p>
+                    </div>
+                {/if}
             </div>
 
             <!-- Engine Info -->
