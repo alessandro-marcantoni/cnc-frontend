@@ -110,6 +110,19 @@ export async function removeFromWaitlist(
     throw new Error(errorMessage);
   }
 
+  // Handle 204 No Content response (successful deletion with no body)
+  if (response.status === 204) {
+    // Return a minimal WaitlistEntry object for 204 responses
+    // Since the entry was deleted, we return the request parameters
+    return {
+      id: 0, // Placeholder ID since entry was deleted
+      memberId,
+      facilityTypeId,
+      queuedAt: new Date().toISOString(),
+      notes: undefined,
+    };
+  }
+
   const data = await response.json();
   return data;
 }

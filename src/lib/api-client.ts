@@ -31,6 +31,11 @@ async function handleResponse<T>(response: Response): Promise<T> {
     throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
   }
 
+  // Handle 204 No Content response (successful with no body)
+  if (response.status === 204) {
+    return { success: true } as T;
+  }
+
   return await response.json();
 }
 

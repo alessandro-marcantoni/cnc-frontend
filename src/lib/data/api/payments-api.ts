@@ -118,6 +118,11 @@ export async function deletePayment(
     throw new Error(errorMessage);
   }
 
+  // Handle 204 No Content response (successful deletion with no body)
+  if (response.status === 204) {
+    return { success: true };
+  }
+
   const data = await response.json();
   return data;
 }
