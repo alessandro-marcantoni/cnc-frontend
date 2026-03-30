@@ -24,6 +24,7 @@
     import RenewMembershipDialog from "$lib/components/member-detail/renew-membership-dialog.svelte";
     import EditMemberDialog from "$lib/components/member-detail/edit-member-dialog.svelte";
     import ChangeFacilityDialog from "$lib/components/member-detail/change-facility-dialog.svelte";
+    import EditFacilityInfoDialog from "$lib/components/member-detail/edit-facility-info-dialog.svelte";
 
     import {
         loadMemberDetail,
@@ -155,6 +156,7 @@
     let isPaymentDialogOpen = $state(false);
     let isFreeDialogOpen = $state(false);
     let isChangeFacilityDialogOpen = $state(false);
+    let isEditFacilityInfoDialogOpen = $state(false);
     let selectedRentedFacility = $state<RentedFacility | null>(null);
 
     // Edit member dialog state
@@ -258,6 +260,19 @@
     function openFreeDialog(facility: RentedFacility) {
         selectedRentedFacility = facility;
         isFreeDialogOpen = true;
+    }
+
+    function openEditFacilityInfoDialog(facility: RentedFacility) {
+        selectedRentedFacility = facility;
+        isEditFacilityInfoDialogOpen = true;
+    }
+
+    async function handleEditFacilityInfoSuccess() {
+        // Clear the facilities-by-type cache since info has been updated
+        clearFacilitiesByTypeCache();
+
+        // Refresh the data to reflect the changes
+        await handleRefresh();
     }
 
     async function handleFreeFacility() {
@@ -521,6 +536,7 @@
                     onFree={openFreeDialog}
                     onRenew={openRenewFacilityDialog}
                     onChange={openChangeFacilityDialog}
+                    onEditInfo={openEditFacilityInfoDialog}
                     {canRent}
                 />
 
@@ -571,6 +587,18 @@
     bind:open={isFreeDialogOpen}
     facility={selectedRentedFacility}
     onConfirm={handleFreeFacility}
+/>
+
+<!-- Edit Facility Info Dialog -->
+<EditFacilityInfoDialog
+    bind:open={isEditFacilityInfoDialogOpen}
+    facility={selectedRentedFacility}
+    memberId={member?.id || 0}
+    seasonId={selectedSeason ? selectedSeason.id : currentSeason.id}
+    onClose={() => {
+        isEditFacilityInfoDialogOpen = false;
+    }}
+    onSuccess={handleEditFacilityInfoSuccess}
 />
 
 <!-- Renew Membership Dialog -->

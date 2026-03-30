@@ -29,10 +29,17 @@
         onFree: (facility: RentedFacility) => void;
         onRenew: (facility: RentedFacility) => void;
         onChange: (facility: RentedFacility) => void;
+        onEditInfo: (facility: RentedFacility) => void;
     }
 
-    let { facility, onEditPayment, onFree, onRenew, onChange }: Props =
-        $props();
+    let {
+        facility,
+        onEditPayment,
+        onFree,
+        onRenew,
+        onChange,
+        onEditInfo,
+    }: Props = $props();
 
     function formatCurrency(amount: number, currency: string): string {
         return new Intl.NumberFormat("it-IT", {
@@ -124,11 +131,21 @@
     {#if facility.boatInfo}
         <Separator class="my-4" />
         <div class="bg-muted/50 rounded-lg p-3">
-            <div class="flex items-center gap-2 mb-3">
-                <Ship class="h-4 w-4 text-muted-foreground" />
-                <span class="text-sm font-medium"
-                    >Informazioni Imbarcazione</span
+            <div class="flex items-center justify-between gap-2 mb-3">
+                <div class="flex items-center gap-2">
+                    <Ship class="h-4 w-4 text-muted-foreground" />
+                    <span class="text-sm font-medium"
+                        >Informazioni Imbarcazione</span
+                    >
+                </div>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onclick={() => onEditInfo(facility)}
                 >
+                    <Pencil class="h-3 w-3 mr-1" />
+                    Modifica
+                </Button>
             </div>
             <div class="grid grid-cols-3 gap-3 text-sm">
                 <div>
@@ -218,9 +235,19 @@
     {#if facility.leerboardInfo}
         <Separator class="my-4" />
         <div class="bg-muted/50 rounded-lg p-3">
-            <div class="flex items-center gap-2 mb-3">
-                <Anchor class="h-4 w-4 text-muted-foreground" />
-                <span class="text-sm font-medium">Informazioni Deriva</span>
+            <div class="flex items-center justify-between gap-2 mb-3">
+                <div class="flex items-center gap-2">
+                    <Anchor class="h-4 w-4 text-muted-foreground" />
+                    <span class="text-sm font-medium">Informazioni Deriva</span>
+                </div>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onclick={() => onEditInfo(facility)}
+                >
+                    <Pencil class="h-3 w-3 mr-1" />
+                    Modifica
+                </Button>
             </div>
             <div class="grid grid-cols-3 gap-3 text-sm">
                 <div>

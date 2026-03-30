@@ -392,3 +392,88 @@ export async function freeFacility(
   const data = await response.json();
   return data;
 }
+
+export interface UpdateBoatInfoRequest {
+  memberId: number;
+  seasonId: number;
+  name: string;
+  lengthMeters: number;
+  widthMeters?: number;
+  type: string;
+  engineInfo: string;
+  insuranceProvider: string;
+  insuranceNumber: string;
+  insuranceExpiresAt: string;
+}
+
+export interface UpdateLeerboardInfoRequest {
+  memberId: number;
+  seasonId: number;
+  color: string;
+  type: string;
+  lengthMeters: number;
+}
+
+export async function updateBoatInfo(
+  rentedFacilityId: number,
+  boatInfo: UpdateBoatInfoRequest,
+): Promise<any> {
+  const response = await apiFetch(
+    `/api/v1.0/facilities/rented/${rentedFacilityId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(boatInfo),
+    },
+  );
+
+  if (!response.ok) {
+    let errorMessage = `Failed to update boat info: ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      if (errorData.error) {
+        errorMessage = errorData.error;
+      }
+    } catch {
+      // If parsing fails, use the default message
+    }
+    throw new Error(errorMessage);
+  }
+
+  const data = await response.json();
+  return data;
+}
+
+export async function updateLeerboardInfo(
+  rentedFacilityId: number,
+  leerboardInfo: UpdateLeerboardInfoRequest,
+): Promise<any> {
+  const response = await apiFetch(
+    `/api/v1.0/facilities/rented/${rentedFacilityId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(leerboardInfo),
+    },
+  );
+
+  if (!response.ok) {
+    let errorMessage = `Failed to update leerboard info: ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      if (errorData.error) {
+        errorMessage = errorData.error;
+      }
+    } catch {
+      // If parsing fails, use the default message
+    }
+    throw new Error(errorMessage);
+  }
+
+  const data = await response.json();
+  return data;
+}
