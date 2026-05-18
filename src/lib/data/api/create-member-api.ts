@@ -13,6 +13,13 @@ export interface CreateMemberRequest {
   birthDate: string; // ISO date string (YYYY-MM-DD)
   email?: string;
   taxCode?: string;
+  birthPlace?: {
+    country: string;
+    city: string;
+    street: string;
+    streetNumber: string;
+    zipCode: string;
+  };
   phoneNumbers: Array<{
     number: string;
   }>;
@@ -35,6 +42,13 @@ export interface CreateMemberResponse {
   email?: string;
   taxCode?: string;
   birthDate: string;
+  birthPlace?: {
+    country: string;
+    city: string;
+    street: string;
+    streetNumber: string;
+    zipCode: string;
+  };
   phoneNumbers: Array<{
     number: string;
   }>;
@@ -103,6 +117,15 @@ export async function createMember(
     email: data.email,
     taxCode: data.taxCode,
     birthDate: parseDate(data.birthDate),
+    birthPlace: data.birthPlace
+      ? {
+          country: data.birthPlace.country,
+          city: data.birthPlace.city,
+          zipCode: data.birthPlace.zipCode,
+          street: data.birthPlace.street,
+          number: data.birthPlace.streetNumber,
+        }
+      : undefined,
     addresses: data.addresses.map((address) => ({
       country: address.country,
       city: address.city,

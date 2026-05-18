@@ -10,6 +10,7 @@
         MapPin,
         CreditCard,
         Pencil,
+        Building2,
     } from "@lucide/svelte";
     import { formatDate } from "$model/shared/date-utils";
     import type { MemberDetail } from "$model/members/member-detail";
@@ -101,6 +102,37 @@
         </div>
 
         <Separator />
+
+        <!-- Birth Place -->
+        {#if member.birthPlace}
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <Building2 class="h-4 w-4 text-muted-foreground" />
+                    <span class="text-sm font-medium text-muted-foreground"
+                        >Luogo di Nascita</span
+                    >
+                </div>
+                <div class="text-sm">
+                    {#if member.birthPlace.street}
+                        <p>
+                            {member.birthPlace.street}{member.birthPlace.number
+                                ? `, ${member.birthPlace.number}`
+                                : ""}
+                        </p>
+                    {/if}
+                    <p>
+                        {member.birthPlace.zipCode
+                            ? `${member.birthPlace.zipCode} `
+                            : ""}{member.birthPlace.city}
+                    </p>
+                    <p class="text-muted-foreground">
+                        {member.birthPlace.country}
+                    </p>
+                </div>
+            </div>
+
+            <Separator />
+        {/if}
 
         <!-- Phone Numbers -->
         <div>

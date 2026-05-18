@@ -50,6 +50,15 @@
         }>
     >([{ country: "", city: "", zipCode: "", street: "", number: "" }]);
 
+    let birthPlace = $state<{
+        country: string;
+        city: string;
+        zipCode: string;
+        street: string;
+        number: string;
+    } | null>(null);
+    let hasBirthPlace = $state(false);
+
     let isSubmitting = $state(false);
     let errorMessage = $state<string | null>(null);
 
@@ -138,6 +147,16 @@
                     birthDate: birthDateStr,
                     email: email.trim() || undefined,
                     taxCode: taxCode.trim() || undefined,
+                    birthPlace:
+                        hasBirthPlace && birthPlace
+                            ? {
+                                  country: birthPlace.country,
+                                  city: birthPlace.city,
+                                  zipCode: birthPlace.zipCode,
+                                  street: birthPlace.street,
+                                  number: birthPlace.number,
+                              }
+                            : undefined,
                     phoneNumbers: validPhoneNumbers,
                     addresses: validAddresses,
                 },
@@ -189,6 +208,22 @@
                           },
                       ];
             errorMessage = null;
+            hasBirthPlace = !!member.birthPlace;
+            birthPlace = member.birthPlace
+                ? {
+                      country: member.birthPlace.country,
+                      city: member.birthPlace.city,
+                      zipCode: member.birthPlace.zipCode,
+                      street: member.birthPlace.street,
+                      number: member.birthPlace.number,
+                  }
+                : {
+                      country: "",
+                      city: "",
+                      zipCode: "",
+                      street: "",
+                      number: "",
+                  };
         }
     });
 </script>
@@ -388,6 +423,79 @@
                 {/each}
                 <p class="text-xs text-muted-foreground">
                     Almeno un indirizzo è richiesto
+                </p>
+            </div>
+
+            <!-- Birth Place -->
+            <div class="grid gap-3">
+                <div class="flex items-center justify-between">
+                    <Label>Luogo di Nascita</Label>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onclick={() => {
+                            hasBirthPlace = !hasBirthPlace;
+                            if (hasBirthPlace && !birthPlace) {
+                                birthPlace = {
+                                    country: "",
+                                    city: "",
+                                    zipCode: "",
+                                    street: "",
+                                    number: "",
+                                };
+                            }
+                        }}
+                        disabled={isSubmitting}
+                    >
+                        {#if hasBirthPlace}
+                            <Trash2 class="h-3 w-3 mr-1" />
+                            Rimuovi
+                        {:else}
+                            <Plus class="h-3 w-3 mr-1" />
+                            Aggiungi
+                        {/if}
+                    </Button>
+                </div>
+
+                {#if hasBirthPlace && birthPlace}
+                    <div class="grid gap-3 p-3 border rounded-lg">
+                        <div class="grid grid-cols-2 gap-3">
+                            <Input
+                                bind:value={birthPlace.street}
+                                placeholder="Via/Piazza"
+                                disabled={isSubmitting}
+                            />
+                            <Input
+                                bind:value={birthPlace.number}
+                                placeholder="Numero"
+                                disabled={isSubmitting}
+                            />
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-3">
+                            <Input
+                                bind:value={birthPlace.zipCode}
+                                placeholder="CAP"
+                                disabled={isSubmitting}
+                            />
+                            <Input
+                                bind:value={birthPlace.city}
+                                placeholder="Città"
+                                disabled={isSubmitting}
+                                class="col-span-2"
+                            />
+                        </div>
+
+                        <Input
+                            bind:value={birthPlace.country}
+                            placeholder="Paese"
+                            disabled={isSubmitting}
+                        />
+                    </div>
+                {/if}
+                <p class="text-xs text-muted-foreground">
+                    Luogo di nascita del socio (opzionale)
                 </p>
             </div>
         </div>

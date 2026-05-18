@@ -27,6 +27,7 @@ export {
   clearRentedFacilitiesCache,
   addRentedFacilityToCache,
   removeRentedFacilityFromCache,
+  updateRentedFacilityPrice,
   isLoadingRentedFacilities,
   rentedFacilitiesError,
   rentedFacilities,

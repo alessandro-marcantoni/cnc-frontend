@@ -477,3 +477,77 @@ export async function updateLeerboardInfo(
   const data = await response.json();
   return data;
 }
+
+/**
+ * Update the price of a rented facility
+ */
+export async function updateFacilityPrice(
+  rentedFacilityId: number,
+  price: number,
+): Promise<RentedFacility> {
+  const response = await apiFetch(
+    `/api/v1.0/facilities/rented/${rentedFacilityId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ price }),
+    },
+  );
+
+  if (!response.ok) {
+    let errorMessage = `Failed to update facility price: ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      if (errorData.error) {
+        errorMessage = errorData.error;
+      }
+    } catch {
+      // If parsing fails, use the default message
+    }
+    throw new Error(errorMessage);
+  }
+
+  const data = await response.json();
+
+  const rentedFacility: RentedFacility = {
+    id: data.id,
+    facilityId: data.facilityId,
+    facilityIdentifier: data.facilityIdentifier,
+    facilityName: data.facilityName,
+    facilityTypeDescription: data.facilityTypeDescription,
+    rentedAt: parseDate(data.rentedAt),
+    expiresAt: parseDate(data.expiresAt),
+    price: data.price,
+    payment: data.payment
+      ? {
+          id: data.payment.id,
+          amount: data.payment.amount,
+          currency: data.payment.currency,
+          paidAt: data.payment.paidAt,
+          paymentMethod: data.payment.paymentMethod,
+          transactionRef: data.payment.transactionRef,
+        }
+      : null,
+    boatInfo: data.boatInfo
+      ? {
+          name: data.boatInfo.name,
+          lengthMeters: data.boatInfo.lengthMeters,
+          widthMeters: data.boatInfo.widthMeters,
+          type: data.boatInfo.type,
+          engineInfo: data.boatInfo.engineInfo,
+          insurances: data.boatInfo.insurances || [],
+        }
+      : null,
+    leerboardInfo: data.leerboardInfo
+      ? {
+          color: data.leerboardInfo.color,
+          type: data.leerboardInfo.type,
+          lengthMeters: data.leerboardInfo.lengthMeters,
+        }
+      : null,
+  };
+
+  return rentedFacility;
+}

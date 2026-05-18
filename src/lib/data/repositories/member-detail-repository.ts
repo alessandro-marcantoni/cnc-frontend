@@ -228,6 +228,13 @@ export async function updateMember(
     birthDate: string;
     email?: string;
     taxCode?: string;
+    birthPlace?: {
+      country: string;
+      city: string;
+      zipCode: string;
+      street: string;
+      number: string;
+    };
     phoneNumbers: Array<{ number: string }>;
     addresses: Array<{
       country: string;
@@ -256,6 +263,15 @@ export async function updateMember(
     // Transform addresses to match API format
     const requestData = {
       ...memberData,
+      birthPlace: memberData.birthPlace
+        ? {
+            country: memberData.birthPlace.country,
+            city: memberData.birthPlace.city,
+            zipCode: memberData.birthPlace.zipCode,
+            street: memberData.birthPlace.street,
+            streetNumber: memberData.birthPlace.number,
+          }
+        : undefined,
       addresses: memberData.addresses.map((addr) => ({
         country: addr.country,
         city: addr.city,

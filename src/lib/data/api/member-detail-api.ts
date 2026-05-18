@@ -35,6 +35,15 @@ export async function fetchMemberDetail(
     email: data.email,
     taxCode: data.taxCode,
     birthDate: parseDate(data.birthDate),
+    birthPlace: data.birthPlace
+      ? {
+          country: data.birthPlace.country,
+          city: data.birthPlace.city,
+          zipCode: data.birthPlace.zipCode,
+          street: data.birthPlace.street,
+          number: data.birthPlace.streetNumber,
+        }
+      : undefined,
     addresses: data.addresses.map((address: any) => ({
       country: address.country,
       city: address.city,
@@ -84,6 +93,13 @@ export async function updateMemberDetail(
     birthDate: string;
     email?: string;
     taxCode?: string;
+    birthPlace?: {
+      country: string;
+      city: string;
+      zipCode: string;
+      street: string;
+      streetNumber: string;
+    };
     phoneNumbers: Array<{ number: string }>;
     addresses: Array<{
       country: string;
@@ -103,6 +119,15 @@ export async function updateMemberDetail(
     birthDate: memberData.birthDate,
     email: memberData.email || "",
     taxCode: memberData.taxCode || "",
+    birthPlace: memberData.birthPlace
+      ? {
+          country: memberData.birthPlace.country,
+          city: memberData.birthPlace.city,
+          zipCode: memberData.birthPlace.zipCode,
+          street: memberData.birthPlace.street,
+          streetNumber: memberData.birthPlace.streetNumber,
+        }
+      : undefined,
     phoneNumbers: memberData.phoneNumbers,
     addresses: memberData.addresses.map((addr) => ({
       country: addr.country,
@@ -138,6 +163,15 @@ export async function updateMemberDetail(
     email: data.email,
     taxCode: data.taxCode,
     birthDate: parseDate(data.birthDate),
+    birthPlace: data.birthPlace
+      ? {
+          country: data.birthPlace.country,
+          city: data.birthPlace.city,
+          zipCode: data.birthPlace.zipCode,
+          street: data.birthPlace.street,
+          number: data.birthPlace.streetNumber,
+        }
+      : undefined,
     addresses: data.addresses.map((address: any) => ({
       country: address.country,
       city: address.city,

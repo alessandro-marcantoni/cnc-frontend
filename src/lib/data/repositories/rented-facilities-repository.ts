@@ -1,6 +1,6 @@
 import { writable, derived, get } from "svelte/store";
 import type { RentedFacility } from "$model/facilities/rented-facility";
-import { fetchRentedFacilities } from "$lib/data/api";
+import { fetchRentedFacilities, updateFacilityPrice } from "$lib/data/api";
 
 // Configuration
 const USE_MOCK_DATA = import.meta.env.DEV && !import.meta.env.VITE_API_URL;
@@ -258,4 +258,38 @@ export function removeRentedFacilityFromCache(
     }
     return { ...state, cache };
   });
+}
+
+/**
+ * Update the price of a rented facility
+ * @param memberId - The member ID (for cache invalidation)
+ * @param rentedFacilityId - The ID of the rented facility to update
+ * @param price - The new price
+ * @param season - Optional season to update cache for
+ */
+export async function updateRentedFacilityPrice(
+  memberId: number,
+  rentedFacilityId: number,
+  price: number,
+  season?: number,
+): Promise<RentedFacility> {
+  const updatedFacility = await updateFacilityPrice(rentedFacilityId, price);
+
+  // Update the facility in cache
+  rentedFacilitiesStore.update((state) => {
+    const cache = new Map(state.cache);
+    const cacheKey = getCacheKey(memberId, season);
+    const entry = cache.get(cacheKey);
+    if (entry) {
+      cache.set(cacheKey, {
+        data: entry.data.map((f) =>
+          f.id === rentedFacilityId ? updatedFacility : f,
+        ),
+        timestamp: Date.now(),
+      });
+    }
+    return { ...state, cache };
+  });
+
+  return updatedFacility;
 }

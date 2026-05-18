@@ -21,6 +21,7 @@
         CreditCard,
         CircleAlert,
         LoaderCircle,
+        Building2,
     } from "@lucide/svelte";
     import type { CalendarDate } from "@internationalized/date";
 
@@ -85,6 +86,24 @@
     type PhoneNumberEntry = {
         number: string;
     };
+
+    // Birth place state
+    type BirthPlaceEntry = {
+        country: string;
+        city: string;
+        street: string;
+        number: string;
+        zipCode: string;
+    };
+
+    let hasBirthPlace = $state(false);
+    let birthPlace = $state<BirthPlaceEntry>({
+        country: "",
+        city: "",
+        street: "",
+        number: "",
+        zipCode: "",
+    });
 
     let addresses = $state<Address[]>([
         { country: "Italia", city: "", street: "", number: "", zipCode: "" },
@@ -200,6 +219,15 @@
         membershipPrice = 130.0;
         isSubmitting = false;
 
+        hasBirthPlace = false;
+        birthPlace = {
+            country: "",
+            city: "",
+            street: "",
+            number: "",
+            zipCode: "",
+        };
+
         addresses = [
             {
                 country: "Italia",
@@ -266,6 +294,16 @@
                 email: email.trim() || undefined,
                 taxCode: taxCode.trim() || undefined,
                 birthDate: birthDate.toString(),
+                birthPlace:
+                    hasBirthPlace && birthPlace.city.trim() !== ""
+                        ? {
+                              country: birthPlace.country,
+                              city: birthPlace.city,
+                              street: birthPlace.street,
+                              streetNumber: birthPlace.number,
+                              zipCode: birthPlace.zipCode,
+                          }
+                        : undefined,
                 phoneNumbers: apiPhoneNumbers,
                 addresses: apiAddresses,
                 createMembership: addMembershipNow,
@@ -493,6 +531,90 @@
                         label="Data di Nascita *"
                         placeholder="Seleziona data"
                     />
+
+                    <!-- Birth Place (optional) -->
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <Label class="flex items-center gap-2">
+                                <Building2 class="h-4 w-4" />
+                                Luogo di Nascita (opzionale)
+                            </Label>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onclick={() => {
+                                    hasBirthPlace = !hasBirthPlace;
+                                }}
+                            >
+                                {#if hasBirthPlace}
+                                    <Trash2 class="h-3 w-3 mr-1" />
+                                    Rimuovi
+                                {:else}
+                                    <Plus class="h-3 w-3 mr-1" />
+                                    Aggiungi
+                                {/if}
+                            </Button>
+                        </div>
+
+                        {#if hasBirthPlace}
+                            <div class="space-y-3 p-3 border rounded-lg">
+                                <div class="grid grid-cols-3 gap-3">
+                                    <div class="col-span-2 space-y-2">
+                                        <Label for="birthplace-street"
+                                            >Via/Piazza</Label
+                                        >
+                                        <Input
+                                            id="birthplace-street"
+                                            bind:value={birthPlace.street}
+                                            placeholder="Via Roma"
+                                        />
+                                    </div>
+                                    <div class="space-y-2">
+                                        <Label for="birthplace-number"
+                                            >Numero</Label
+                                        >
+                                        <Input
+                                            id="birthplace-number"
+                                            bind:value={birthPlace.number}
+                                            placeholder="1"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-3 gap-3">
+                                    <div class="space-y-2">
+                                        <Label for="birthplace-zip">CAP</Label>
+                                        <Input
+                                            id="birthplace-zip"
+                                            bind:value={birthPlace.zipCode}
+                                            placeholder="00100"
+                                        />
+                                    </div>
+                                    <div class="col-span-2 space-y-2">
+                                        <Label for="birthplace-city"
+                                            >Città *</Label
+                                        >
+                                        <Input
+                                            id="birthplace-city"
+                                            bind:value={birthPlace.city}
+                                            placeholder="Roma"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <Label for="birthplace-country">Paese</Label
+                                    >
+                                    <Input
+                                        id="birthplace-country"
+                                        bind:value={birthPlace.country}
+                                        placeholder="Italia"
+                                    />
+                                </div>
+                            </div>
+                        {/if}
+                    </div>
                 </div>
             {/if}
 

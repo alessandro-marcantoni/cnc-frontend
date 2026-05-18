@@ -25,6 +25,7 @@
     import EditMemberDialog from "$lib/components/member-detail/edit-member-dialog.svelte";
     import ChangeFacilityDialog from "$lib/components/member-detail/change-facility-dialog.svelte";
     import EditFacilityInfoDialog from "$lib/components/member-detail/edit-facility-info-dialog.svelte";
+    import EditFacilityPriceDialog from "$lib/components/member-detail/edit-facility-price-dialog.svelte";
 
     import {
         loadMemberDetail,
@@ -157,6 +158,7 @@
     let isFreeDialogOpen = $state(false);
     let isChangeFacilityDialogOpen = $state(false);
     let isEditFacilityInfoDialogOpen = $state(false);
+    let isEditFacilityPriceDialogOpen = $state(false);
     let selectedRentedFacility = $state<RentedFacility | null>(null);
 
     // Edit member dialog state
@@ -265,6 +267,11 @@
     function openEditFacilityInfoDialog(facility: RentedFacility) {
         selectedRentedFacility = facility;
         isEditFacilityInfoDialogOpen = true;
+    }
+
+    function openEditFacilityPriceDialog(facility: RentedFacility) {
+        selectedRentedFacility = facility;
+        isEditFacilityPriceDialogOpen = true;
     }
 
     async function handleEditFacilityInfoSuccess() {
@@ -537,6 +544,7 @@
                     onRenew={openRenewFacilityDialog}
                     onChange={openChangeFacilityDialog}
                     onEditInfo={openEditFacilityInfoDialog}
+                    onEditPrice={(f) => openEditFacilityPriceDialog(f)}
                     {canRent}
                 />
 
@@ -599,6 +607,16 @@
         isEditFacilityInfoDialogOpen = false;
     }}
     onSuccess={handleEditFacilityInfoSuccess}
+/>
+
+<!-- Edit Facility Price Dialog -->
+<EditFacilityPriceDialog
+    bind:open={isEditFacilityPriceDialogOpen}
+    facility={selectedRentedFacility}
+    memberId={member?.id || 0}
+    seasonId={selectedSeason ? selectedSeason.id : currentSeason.id}
+    onClose={() => (isEditFacilityPriceDialogOpen = false)}
+    onSuccess={handleRefresh}
 />
 
 <!-- Renew Membership Dialog -->

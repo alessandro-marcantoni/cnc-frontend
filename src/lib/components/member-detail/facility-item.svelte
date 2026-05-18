@@ -30,6 +30,7 @@
         onRenew: (facility: RentedFacility) => void;
         onChange: (facility: RentedFacility) => void;
         onEditInfo: (facility: RentedFacility) => void;
+        onEditPrice: (facility: RentedFacility) => void;
     }
 
     let {
@@ -39,6 +40,7 @@
         onRenew,
         onChange,
         onEditInfo,
+        onEditPrice,
     }: Props = $props();
 
     function formatCurrency(amount: number, currency: string): string {
@@ -95,6 +97,14 @@
             >
                 <Pencil class="h-4 w-4 mr-2" />
                 Cambia
+            </Button>
+            <Button
+                variant="outline"
+                size="sm"
+                onclick={() => onEditPrice(facility)}
+            >
+                <Euro class="h-4 w-4 mr-2" />
+                Modifica Prezzo
             </Button>
             <Button
                 variant="outline"
